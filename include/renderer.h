@@ -9,7 +9,7 @@
 class Renderer {
 public:
     static const int CELL_SIZE = 60;
-    static const int WINDOW_SIZE = CELL_SIZE * Sudoku::GRID_SIZE;
+    static const int WINDOW_SIZE = CELL_SIZE * Sudoku::GRID_SIZE + 50;
     
     Renderer();
     ~Renderer();
@@ -29,6 +29,8 @@ private:
     void renderNumbers(const Sudoku& sudoku);
     void renderSelectedCell(int row, int col);
     void renderNumber(int number, int row, int col, bool isFixed);
+    void renderNumberCounts(const Sudoku& sudoku);
+    std::array<int, 9> calculateNumberCounts(const Sudoku& sudoku) const;
 };
 
 #endif // RENDERER_H
