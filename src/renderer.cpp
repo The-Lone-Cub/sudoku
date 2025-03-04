@@ -110,13 +110,16 @@ void Renderer::renderNumbers(const Sudoku& sudoku) {
 }
 
 void Renderer::renderSelectedCell(int row, int col) {
+    // Calculate exact grid size
+    const int GRID_PIXELS = Sudoku::GRID_SIZE * CELL_SIZE;
+
     // Highlight the entire row with a very faint blue
     SDL_SetRenderDrawColor(renderer, 230, 240, 255, 255); // Very light blue
-    SDL_Rect rowRect = {0, row * CELL_SIZE, WINDOW_SIZE - CELL_SIZE, CELL_SIZE};  // Reduced width
+    SDL_Rect rowRect = {0, row * CELL_SIZE, GRID_PIXELS, CELL_SIZE};
 
     // Highlight the entire column with a slightly different faint blue
     SDL_SetRenderDrawColor(renderer, 220, 235, 255, 255); // Another very light blue
-    SDL_Rect colRect = {col * CELL_SIZE, 0, CELL_SIZE, WINDOW_SIZE - CELL_SIZE};  // Reduced height
+    SDL_Rect colRect = {col * CELL_SIZE, 0, CELL_SIZE, GRID_PIXELS};
 
     // Highlight the 3x3 subgrid with yet another faint blue
     SDL_SetRenderDrawColor(renderer, 225, 238, 255, 255); // Third very light blue
