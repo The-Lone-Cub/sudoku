@@ -1,7 +1,9 @@
 #include "game.h"
 #include <SDL2/SDL.h>
 
-Game::Game() : running(false), selectedRow(-1), selectedCol(-1) {
+int Game::currentElapsedSeconds = 0;  // Initialize static member
+
+Game::Game() : running(false), selectedRow(-1), selectedCol(-1), startTime(0), elapsedSeconds(0) {
 }
 
 Game::~Game() {}
@@ -11,14 +13,25 @@ bool Game::init() {
         return false;
     }
     running = true;
+    startTime = SDL_GetTicks();
     return true;
 }
 
 void Game::run() {
     while (running) {
         handleEvents();
+        updateTimer();
         renderer.render(sudoku, selectedRow, selectedCol);
         SDL_Delay(16); // Cap at ~60 FPS
+    }
+}
+
+void Game::updateTimer() {
+    if (running) {
+        Uint32 currentTime = SDL_GetTicks();
+        elapsedSeconds = (currentTime - startTime) / 1000;
+        currentElapsedSeconds = elapsedSeconds;  // Update static member
+        renderer.renderTimer(elapsedSeconds);
     }
 }
 

@@ -1,6 +1,9 @@
 #include "renderer.h"
+#include "game.h"
 #include <stdexcept>
 #include <array>
+#include <sstream>
+#include <iomanip>
 
 Renderer::Renderer() : window(nullptr), renderer(nullptr), font(nullptr) {}
 
@@ -75,6 +78,9 @@ void Renderer::render(const Sudoku& sudoku, int selectedRow, int selectedCol) {
     // Render score in top-left corner
     renderScore(sudoku.getScore());
 
+    // Render timer in top-right corner
+    renderTimer(Game::getElapsedSeconds());
+
     if (selectedRow >= 0 && selectedCol >= 0) {
         renderSelectedCell(selectedRow, selectedCol);
     }
@@ -91,6 +97,18 @@ void Renderer::renderScore(int score) {
     renderText(scoreText, 10, 10, color);
 }
 
+void Renderer::renderTimer(int elapsedSeconds) {
+    int minutes = elapsedSeconds / 60;
+    int seconds = elapsedSeconds % 60;
+    
+    std::stringstream ss;
+    ss << std::setfill('0') << std::setw(2) << minutes << ":" 
+       << std::setfill('0') << std::setw(2) << seconds;
+    
+    SDL_Color color = {0, 0, 0, 255}; // Black color for timer
+    renderText(ss.str(), WINDOW_WIDTH - 100, 10, color); // Position in top-right corner
+}
+
 void Renderer::renderText(const std::string& text, int x, int y, SDL_Color color) {
     SDL_Surface* surface = TTF_RenderText_Blended(font, text.c_str(), color);
     if (!surface) return;
@@ -99,11 +117,12 @@ void Renderer::renderText(const std::string& text, int x, int y, SDL_Color color
     SDL_FreeSurface(surface);
     if (!texture) return;
 
-    int textW, textH;
-    SDL_QueryTexture(texture, nullptr, nullptr, &textW, &textH);
-    SDL_Rect dstRect = {x, y, textW, textH};
+    SDL_Rect destRect;
+    TTF_SizeText(font, text.c_str(), &destRect.w, &destRect.h);
+    destRect.x = x;
+    destRect.y = y;
 
-    SDL_RenderCopy(renderer, texture, nullptr, &dstRect);
+    SDL_RenderCopy(renderer, texture, NULL, &destRect);
     SDL_DestroyTexture(texture);
 }
 

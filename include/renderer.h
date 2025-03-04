@@ -21,6 +21,7 @@ public:
     void getGridPosition(int mouseX, int mouseY, int& row, int& col);
     void close();
     void renderScore(int score);
+    void renderTimer(int elapsedSeconds);
 
 private:
     SDL_Window* window;
