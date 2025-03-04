@@ -1,11 +1,13 @@
 #include "sudoku.h"
 #include <ctime>
-#include <random> // Add this at the top with other includes
 
 Sudoku::Sudoku() : grid(GRID_SIZE, std::vector<int>(GRID_SIZE, 0)),
-                   fixed(GRID_SIZE, std::vector<bool>(GRID_SIZE, false)) {
+                   solution(GRID_SIZE, std::vector<int>(GRID_SIZE, 0)),
+                   fixed(GRID_SIZE, std::vector<bool>(GRID_SIZE, false)),
+                   score(0) {
     std::srand(static_cast<unsigned>(std::time(nullptr)));
     generatePuzzle();
+    initializeScore();
 }
 
 void Sudoku::generatePuzzle() {
@@ -28,6 +30,7 @@ void Sudoku::generatePuzzle() {
         for (int i = 0; i < SUBGRID_SIZE; i++) {
             for (int j = 0; j < SUBGRID_SIZE; j++) {
                 grid[box + i][box + j] = nums[i * SUBGRID_SIZE + j];
+                solution[box + i][box + j] = nums[i * SUBGRID_SIZE + j];
             }
         }
     }
@@ -62,12 +65,14 @@ bool Sudoku::solveGrid() {
     for (int num : nums) {
         if (isValid(row, col, num)) {
             grid[row][col] = num;
+            solution[row][col] = num;
 
             if (solveGrid()) {
                 return true;
             }
 
             grid[row][col] = 0; // Backtrack
+            solution[row][col] = 0;
         }
     }
 
@@ -150,6 +155,16 @@ bool Sudoku::setNumber(int row, int col, int num) {
 
     if (num == 0 || isValid(row, col, num)) {
         grid[row][col] = num;
+        
+        // Update score based on correctness
+        if (num != 0) {
+            if (isCorrectNumber(row, col, num)) {
+                score += 5;  // Award 5 points for correct number
+            } else {
+                score -= 2;  // Deduct 2 points for wrong number
+            }
+        }
+        
         return true;
     }
 
@@ -159,6 +174,22 @@ bool Sudoku::setNumber(int row, int col, int num) {
 
 int Sudoku::getNumber(int row, int col) const {
     return grid[row][col];
+}
+
+void Sudoku::initializeScore() {
+    score = 0;
+    // Add 5 points for each initial clue
+    for (int i = 0; i < GRID_SIZE; i++) {
+        for (int j = 0; j < GRID_SIZE; j++) {
+            if (fixed[i][j]) {
+                score += 5;
+            }
+        }
+    }
+}
+
+bool Sudoku::isCorrectNumber(int row, int col, int num) const {
+    return solution[row][col] == num;
 }
 
 bool Sudoku::isSolved() const {

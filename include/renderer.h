@@ -9,7 +9,8 @@
 class Renderer {
 public:
     static const int CELL_SIZE = 60;
-    static const int WINDOW_SIZE = CELL_SIZE * Sudoku::GRID_SIZE + 50;
+    static const int WINDOW_WIDTH = CELL_SIZE * Sudoku::GRID_SIZE;
+    static const int WINDOW_HEIGHT = CELL_SIZE * Sudoku::GRID_SIZE + 100; // Increased height to accommodate score display
     
     Renderer();
     ~Renderer();
@@ -19,6 +20,7 @@ public:
     void renderMessage(const std::string& message);
     void getGridPosition(int mouseX, int mouseY, int& row, int& col);
     void close();
+    void renderScore(int score);
 
 private:
     SDL_Window* window;
@@ -31,6 +33,7 @@ private:
     void renderNumber(int number, int row, int col, bool isFixed);
     void renderNumberCounts(const Sudoku& sudoku);
     std::array<int, 9> calculateNumberCounts(const Sudoku& sudoku) const;
+    void renderText(const std::string& text, int x, int y, SDL_Color color);
 };
 
 #endif // RENDERER_H

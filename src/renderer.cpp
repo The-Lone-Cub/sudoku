@@ -19,7 +19,7 @@ bool Renderer::init() {
     }
 
     window = SDL_CreateWindow("Sudoku", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                            WINDOW_SIZE, WINDOW_SIZE + 50, SDL_WINDOW_SHOWN);  // Added 50 pixels for the counts
+                            WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
     if (!window) {
         TTF_Quit();
         SDL_Quit();
@@ -67,6 +67,14 @@ void Renderer::render(const Sudoku& sudoku, int selectedRow, int selectedCol) {
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
 
+    // Add padding at the top for score display
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_Rect topPadding = {0, 0, WINDOW_WIDTH, 50};
+    SDL_RenderFillRect(renderer, &topPadding);
+
+    // Render score in top-left corner
+    renderScore(sudoku.getScore());
+
     if (selectedRow >= 0 && selectedCol >= 0) {
         renderSelectedCell(selectedRow, selectedCol);
     }
@@ -77,8 +85,32 @@ void Renderer::render(const Sudoku& sudoku, int selectedRow, int selectedCol) {
     SDL_RenderPresent(renderer);
 }
 
+void Renderer::renderScore(int score) {
+    std::string scoreText = "Score: " + std::to_string(score);
+    SDL_Color color = {0, 0, 0, 255}; // Black color for score
+    renderText(scoreText, 10, 10, color);
+}
+
+void Renderer::renderText(const std::string& text, int x, int y, SDL_Color color) {
+    SDL_Surface* surface = TTF_RenderText_Blended(font, text.c_str(), color);
+    if (!surface) return;
+
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+    if (!texture) return;
+
+    int textW, textH;
+    SDL_QueryTexture(texture, nullptr, nullptr, &textW, &textH);
+    SDL_Rect dstRect = {x, y, textW, textH};
+
+    SDL_RenderCopy(renderer, texture, nullptr, &dstRect);
+    SDL_DestroyTexture(texture);
+}
+
 void Renderer::renderGrid() {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    // Move grid down by 50 pixels to accommodate score display
+    const int GRID_START_Y = 50;
 
     // Calculate exact grid size (9 cells)
     const int GRID_PIXELS = Sudoku::GRID_SIZE * CELL_SIZE;
@@ -86,14 +118,14 @@ void Renderer::renderGrid() {
     // Draw horizontal lines
     for (int i = 0; i <= Sudoku::GRID_SIZE; i++) {
         int lineWidth = (i % 3 == 0) ? 2 : 1;
-        SDL_Rect rect = {0, i * CELL_SIZE - lineWidth/2, GRID_PIXELS, lineWidth};
+        SDL_Rect rect = {0, GRID_START_Y + i * CELL_SIZE - lineWidth/2, GRID_PIXELS, lineWidth};
         SDL_RenderFillRect(renderer, &rect);
     }
 
     // Draw vertical lines
     for (int i = 0; i <= Sudoku::GRID_SIZE; i++) {
         int lineWidth = (i % 3 == 0) ? 2 : 1;
-        SDL_Rect rect = {i * CELL_SIZE - lineWidth/2, 0, lineWidth, GRID_PIXELS};
+        SDL_Rect rect = {i * CELL_SIZE - lineWidth/2, GRID_START_Y, lineWidth, GRID_PIXELS};
         SDL_RenderFillRect(renderer, &rect);
     }
 }
@@ -112,20 +144,21 @@ void Renderer::renderNumbers(const Sudoku& sudoku) {
 void Renderer::renderSelectedCell(int row, int col) {
     // Calculate exact grid size
     const int GRID_PIXELS = Sudoku::GRID_SIZE * CELL_SIZE;
+    const int GRID_START_Y = 50;
 
     // Highlight the entire row with a very faint blue
     SDL_SetRenderDrawColor(renderer, 230, 240, 255, 255); // Very light blue
-    SDL_Rect rowRect = {0, row * CELL_SIZE, GRID_PIXELS, CELL_SIZE};
+    SDL_Rect rowRect = {0, GRID_START_Y + row * CELL_SIZE, GRID_PIXELS, CELL_SIZE};
 
     // Highlight the entire column with a slightly different faint blue
     SDL_SetRenderDrawColor(renderer, 220, 235, 255, 255); // Another very light blue
-    SDL_Rect colRect = {col * CELL_SIZE, 0, CELL_SIZE, GRID_PIXELS};
+    SDL_Rect colRect = {col * CELL_SIZE, GRID_START_Y, CELL_SIZE, GRID_PIXELS};
 
     // Highlight the 3x3 subgrid with yet another faint blue
     SDL_SetRenderDrawColor(renderer, 225, 238, 255, 255); // Third very light blue
     int subgridStartRow = (row / 3) * 3;
     int subgridStartCol = (col / 3) * 3;
-    SDL_Rect subgridRect = {subgridStartCol * CELL_SIZE, subgridStartRow * CELL_SIZE, CELL_SIZE * 3, CELL_SIZE * 3};
+    SDL_Rect subgridRect = {subgridStartCol * CELL_SIZE, GRID_START_Y + subgridStartRow * CELL_SIZE, CELL_SIZE * 3, CELL_SIZE * 3};
 
     SDL_RenderFillRect(renderer, &rowRect);
     SDL_RenderFillRect(renderer, &colRect);
@@ -133,7 +166,7 @@ void Renderer::renderSelectedCell(int row, int col) {
 
     // Highlight the selected cell with the original light blue color
     SDL_SetRenderDrawColor(renderer, 173, 216, 230, 255); // Original light blue
-    SDL_Rect selectedRect = {col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE};
+    SDL_Rect selectedRect = {col * CELL_SIZE, GRID_START_Y + row * CELL_SIZE, CELL_SIZE, CELL_SIZE};
     SDL_RenderFillRect(renderer, &selectedRect);
 }
 
@@ -155,10 +188,10 @@ void Renderer::renderNumberCounts(const Sudoku& sudoku) {
     
     int numberWidth = CELL_SIZE / 2;
     // Calculate padding to span the entire width
-    int totalWidth = WINDOW_SIZE;
+    int totalWidth = WINDOW_WIDTH;
     int padding = (totalWidth - (9 * numberWidth)) / 10;  // 10 spaces (9 numbers + 1)
     int startX = padding;  // Start after first padding
-    int startY = WINDOW_SIZE + 2;  // Much closer to the grid
+    int startY = WINDOW_HEIGHT - 40;  // Position for number counts (moved down 4 pixels)
     
     for (int i = 0; i < 9; i++) {
         SDL_Color color = (counts[i] == 9) ? SDL_Color{0, 255, 0, 255} : SDL_Color{0, 0, 0, 255};
@@ -211,6 +244,7 @@ void Renderer::renderNumberCounts(const Sudoku& sudoku) {
 void Renderer::renderNumber(int number, int row, int col, bool isFixed) {
     SDL_Color color = isFixed ? SDL_Color{0, 0, 0, 255} : SDL_Color{0, 0, 255, 255};
     std::string text = std::to_string(number);
+    const int GRID_START_Y = 50;
     
     SDL_Surface* surface = TTF_RenderText_Blended(font, text.c_str(), color);
     if (!surface) return;
@@ -224,7 +258,7 @@ void Renderer::renderNumber(int number, int row, int col, bool isFixed) {
 
     SDL_Rect dstRect = {
         col * CELL_SIZE + (CELL_SIZE - textW) / 2,
-        row * CELL_SIZE + (CELL_SIZE - textH) / 2,
+        GRID_START_Y + row * CELL_SIZE + (CELL_SIZE - textH) / 2,
         textW,
         textH
     };
@@ -246,15 +280,15 @@ void Renderer::renderMessage(const std::string& message) {
     SDL_QueryTexture(texture, nullptr, nullptr, &textW, &textH);
 
     SDL_Rect dstRect = {
-        (WINDOW_SIZE - textW) / 2,
-        WINDOW_SIZE / 2 - textH / 2,
+        (WINDOW_WIDTH - textW) / 2,
+        WINDOW_HEIGHT / 2 - textH / 2,
         textW,
         textH
     };
 
     // Draw semi-transparent background
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 200);
-    SDL_Rect bgRect = {0, WINDOW_SIZE/2 - 30, WINDOW_SIZE, 60};
+    SDL_Rect bgRect = {0, WINDOW_HEIGHT/2 - 30, WINDOW_WIDTH, 60};
     SDL_RenderFillRect(renderer, &bgRect);
 
     SDL_RenderCopy(renderer, texture, nullptr, &dstRect);
@@ -263,7 +297,8 @@ void Renderer::renderMessage(const std::string& message) {
 }
 
 void Renderer::getGridPosition(int mouseX, int mouseY, int& row, int& col) {
-    row = mouseY / CELL_SIZE;
+    const int GRID_START_Y = 50;
+    row = (mouseY - GRID_START_Y) / CELL_SIZE;
     col = mouseX / CELL_SIZE;
     
     if (row < 0) row = 0;

@@ -1,7 +1,8 @@
 #include "game.h"
 #include <SDL2/SDL.h>
 
-Game::Game() : running(false), selectedRow(-1), selectedCol(-1) {}
+Game::Game() : running(false), selectedRow(-1), selectedCol(-1) {
+}
 
 Game::~Game() {}
 
@@ -78,4 +79,8 @@ void Game::checkWinCondition() {
         SDL_Delay(2000); // Show message for 2 seconds
         running = false;
     }
+}
+
+void Game::initializeScore() {
+    // Score initialization is now handled by the Sudoku class
 }
