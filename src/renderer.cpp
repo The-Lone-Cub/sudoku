@@ -5,9 +5,16 @@
 #include <sstream>
 #include <iomanip>
 
+SDL_Texture* Renderer::cachedBackground = nullptr;  // Define static member
+
 Renderer::Renderer() : window(nullptr), renderer(nullptr), font(nullptr) {}
 
 Renderer::~Renderer() {
+    if (cachedBackground)
+    {
+        SDL_DestroyTexture(cachedBackground);
+        cachedBackground = nullptr;
+    }
     close();
 }
 
@@ -313,6 +320,190 @@ void Renderer::renderMessage(const std::string& message) {
     SDL_RenderCopy(renderer, texture, nullptr, &dstRect);
     SDL_DestroyTexture(texture);
     SDL_RenderPresent(renderer);
+}
+
+void Renderer::renderHighGammaEffect() {
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 180);
+    SDL_Rect fullScreen = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
+    SDL_RenderFillRect(renderer, &fullScreen);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+}
+
+void Renderer::renderVictoryScreen(int score, int elapsedSeconds) {
+    cachedBackground = nullptr;
+    
+    // Create cached background texture on first call
+    if (!cachedBackground) {
+        // Create a target texture for the background
+        cachedBackground = SDL_CreateTexture(renderer, 
+            SDL_PIXELFORMAT_RGBA8888, 
+            SDL_TEXTUREACCESS_TARGET, 
+            WINDOW_WIDTH, 
+            WINDOW_HEIGHT);
+            
+        // Set the texture as the render target
+        SDL_SetRenderTarget(renderer, cachedBackground);
+        
+        // Apply the high gamma effect
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 180);
+        SDL_Rect fullScreenRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
+        SDL_RenderFillRect(renderer, &fullScreenRect);
+        
+        // Reset render target
+        SDL_SetRenderTarget(renderer, nullptr);
+    }
+    
+    // Copy the cached background
+    SDL_RenderCopy(renderer, cachedBackground, nullptr, nullptr);
+
+    // Rest of the victory screen rendering (stats, buttons, etc.)
+    // Get fresh mouse state at the start of each render
+    int mouseX, mouseY;
+    Uint32 currentMouseState = SDL_GetMouseState(&mouseX, &mouseY);
+
+    // Apply semi-transparent white overlay to create "high gamma" effect
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 180);
+    SDL_Rect fullScreen = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
+    SDL_RenderFillRect(renderer, &fullScreen);
+
+    // Create a semi-transparent white box for victory content
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 230);  // More opaque than the overlay
+    SDL_Rect victoryBox = {WINDOW_WIDTH / 2 - 150, 80, 300, 300};
+    SDL_RenderFillRect(renderer, &victoryBox);
+    
+    // Draw red outline with blend mode normal
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+    SDL_RenderDrawRect(renderer, &victoryBox);
+
+    // Calculate accuracy
+    float accuracy = (static_cast<float>(score) / 405.0f) * 100.0f;
+
+    // Render "SUCCESS" label
+    SDL_Color color = {0, 128, 0, 255};
+    TTF_SetFontStyle(font, TTF_STYLE_BOLD);
+    renderText("SUCCESS!", WINDOW_WIDTH / 2 - 60, 100, color);
+    TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
+
+    // Render stats with aligned formatting
+    const int labelX = WINDOW_WIDTH / 2 - 120;  // Left align position for labels
+    const int valueX = WINDOW_WIDTH / 2 + 120;   // Increased space for right-aligned values
+    int yPos = 150;
+
+    // Score
+    renderText("Score:", labelX, yPos, color);
+    std::string scoreStr = std::to_string(score);
+    int textW, textH;
+    TTF_SizeText(font, scoreStr.c_str(), &textW, &textH);
+    renderText(scoreStr, valueX - textW, yPos, color);
+    yPos += 30;
+
+    // Time
+    renderText("Time:", labelX, yPos, color);
+    std::stringstream timeStr;
+    timeStr << elapsedSeconds / 60 << ":" << std::setfill('0') << std::setw(2) << elapsedSeconds % 60;
+    TTF_SizeText(font, timeStr.str().c_str(), &textW, &textH);
+    renderText(timeStr.str(), valueX - textW, yPos, color);
+    yPos += 30;
+
+    // Accuracy
+    renderText("Accuracy:", labelX, yPos, color);
+    std::stringstream accuracyStr;
+    accuracyStr << std::fixed << std::setprecision(1) << accuracy << "%";
+    TTF_SizeText(font, accuracyStr.str().c_str(), &textW, &textH);
+    renderText(accuracyStr.str(), valueX - textW, yPos, color);
+    yPos += 30;
+
+    // Render buttons with enhanced visual effects
+    SDL_Rect newGameBtn = {WINDOW_WIDTH / 2 - 100, yPos + 20, 200, 40};
+    SDL_Rect exitBtn = {WINDOW_WIDTH / 2 - 100, yPos + 70, 200, 40};
+
+    // Calculate fresh hover states based on current mouse position
+    bool newGameHover = (mouseX >= newGameBtn.x && mouseX <= newGameBtn.x + newGameBtn.w &&
+                        mouseY >= newGameBtn.y && mouseY <= newGameBtn.y + newGameBtn.h);
+    bool exitHover = (mouseX >= exitBtn.x && mouseX <= exitBtn.x + exitBtn.w &&
+                     mouseY >= exitBtn.y && mouseY <= exitBtn.y + exitBtn.h);
+
+    // Render buttons with current state
+    for (int i = 0; i < 2; i++) {
+        SDL_Rect* btn = (i == 0) ? &newGameBtn : &exitBtn;
+        bool isHovered = (i == 0) ? newGameHover : exitHover;
+        bool isCurrentlyClicked = isHovered && (currentMouseState & SDL_BUTTON_LMASK);
+
+        // Modern color scheme using Material Design-inspired colors
+        SDL_Color baseColor = {63, 81, 181, 255};  // Indigo 500
+        SDL_Color hoverColor = {92, 107, 192, 255}; // Indigo 400
+        SDL_Color clickColor = {48, 63, 159, 255};  // Indigo 700
+
+        // Shadow effect with depth
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 60);
+        SDL_Rect btnShadow = {btn->x + 2, btn->y + 2, btn->w, btn->h};
+        SDL_RenderFillRect(renderer, &btnShadow);
+
+        // Button body with position offset when interacting
+        SDL_Rect buttonRect = *btn;
+        if (isHovered) {
+            if (isCurrentlyClicked) {
+                buttonRect.x += 2;
+                buttonRect.y += 2;
+            } else {
+                buttonRect.x += 1;
+                buttonRect.y += 1;
+            }
+        }
+
+        // Set button color based on state
+        SDL_Color currentColor = isHovered ? 
+            (isCurrentlyClicked ? clickColor : hoverColor) : 
+            baseColor;
+        SDL_SetRenderDrawColor(renderer, 
+            currentColor.r, currentColor.g, currentColor.b, currentColor.a);
+
+        // Render button body and effects
+        SDL_SetRenderDrawColor(renderer, 0,
+            isHovered ? (isCurrentlyClicked ? 80 : 100) : 128,
+            0, 255);
+        SDL_RenderFillRect(renderer, &buttonRect);
+
+        // Button border
+        SDL_SetRenderDrawColor(renderer, 0, 200, 0, 255);
+        SDL_RenderDrawRect(renderer, &buttonRect);
+
+        // Button text
+        SDL_Color white = {255, 255, 255, 255};
+        if (i == 0) {
+            renderText("New Game", 
+                      WINDOW_WIDTH / 2 - 40 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
+                      yPos + 30 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
+                      white);
+        } else {
+            renderText("Exit",
+                      WINDOW_WIDTH / 2 - 20 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
+                      yPos + 80 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
+                      white);
+        }
+    }
+    
+    SDL_RenderPresent(renderer);
+}
+
+bool Renderer::handleVictoryScreenClick(int x, int y) {
+    int yPos = 150 + 90;  // Match the button positions from renderVictoryScreen
+    SDL_Rect newGameBtn = {WINDOW_WIDTH / 2 - 100, yPos + 20, 200, 40};
+    SDL_Rect exitBtn = {WINDOW_WIDTH / 2 - 100, yPos + 70, 200, 40};
+
+    if (x >= newGameBtn.x && x <= newGameBtn.x + newGameBtn.w) {
+        if (y >= newGameBtn.y && y <= newGameBtn.y + newGameBtn.h) {
+            return true;  // New Game clicked
+        } else if (y >= exitBtn.y && y <= exitBtn.y + exitBtn.h) {
+            SDL_Quit();
+            exit(0);
+        }
+    }
+    return false;
 }
 
 void Renderer::getGridPosition(int mouseX, int mouseY, int& row, int& col) {

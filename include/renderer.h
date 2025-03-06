@@ -22,12 +22,16 @@ public:
     void close();
     void renderScore(int score);
     void renderTimer(int elapsedSeconds);
+    void renderVictoryScreen(int score, int elapsedSeconds);
+    bool handleVictoryScreenClick(int x, int y);
+    void renderHighGammaEffect();
 
 private:
     SDL_Window* window;
     SDL_Renderer* renderer;
     TTF_Font* font;
-    
+    static SDL_Texture *cachedBackground;
+
     void renderGrid();
     void renderNumbers(const Sudoku& sudoku);
     void renderSelectedCell(int row, int col);

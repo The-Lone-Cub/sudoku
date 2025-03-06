@@ -1,6 +1,6 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -I$(CURDIR)/include
-SDL_FLAGS = -lmingw32 -lSDL2main -lSDL2 -lSDL2_ttf
+SDL_FLAGS = -lmingw32 -lSDL2main -lSDL2 -lSDL2_ttf -mwindows
 
 TARGET = sudoku
 .PHONY: all clean

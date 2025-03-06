@@ -19,10 +19,17 @@ bool Game::init() {
 
 void Game::run() {
     while (running) {
+        // First: Handle all input events
         handleEvents();
+        
+        // Second: Update game state
         updateTimer();
-        renderer.render(sudoku, selectedRow, selectedCol);
-        SDL_Delay(16); // Cap at ~60 FPS
+        
+        // Third: Render the current state
+        if (running) {  // Only render if we're still running
+            renderer.render(sudoku, selectedRow, selectedCol);
+            SDL_Delay(16); // Cap at ~60 FPS
+        }
     }
 }
 
@@ -40,7 +47,8 @@ void Game::handleEvents() {
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
             case SDL_QUIT:
-                running = false;
+                SDL_Quit();
+                exit(0);
                 break;
             case SDL_MOUSEBUTTONDOWN:
                 if (event.button.button == SDL_BUTTON_LEFT) {
@@ -88,9 +96,43 @@ void Game::handleKeyPress(SDL_Keycode key) {
 
 void Game::checkWinCondition() {
     if (sudoku.isSolved()) {
-        renderer.renderMessage("Congratulations! You've solved the Sudoku!");
-        SDL_Delay(2000); // Show message for 2 seconds
-        running = false;
+        bool newGame = false;
+        SDL_Event event;
+        bool shouldClose = false;
+        
+        while (!newGame && !shouldClose) {
+            // Handle all events first
+            while (SDL_PollEvent(&event)) {
+                switch (event.type) {
+                    case SDL_QUIT:
+                        shouldClose = true;
+                        running = false;
+                        break;
+                    case SDL_MOUSEBUTTONDOWN:
+                        if (event.button.button == SDL_BUTTON_LEFT) {
+                            newGame = renderer.handleVictoryScreenClick(event.button.x, event.button.y);
+                        }
+                        break;
+                }
+            }
+            
+            // Only render if we're not closing
+            if (!shouldClose) {
+                renderer.renderVictoryScreen(sudoku.getScore(), elapsedSeconds);
+                SDL_Delay(16);
+            }
+        }
+        
+        if (newGame) {
+            // Reset the game state
+            sudoku = Sudoku();
+            selectedRow = selectedCol = -1;
+            startTime = SDL_GetTicks();
+            elapsedSeconds = 0;
+            currentElapsedSeconds = 0;
+        } else {
+            running = false;
+        }
     }
 }
 

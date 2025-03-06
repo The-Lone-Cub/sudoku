@@ -193,31 +193,13 @@ bool Sudoku::isCorrectNumber(int row, int col, int num) const {
 }
 
 bool Sudoku::isSolved() const {
-    // Check if all cells are filled
+    // Check if all cells are filled and match the solution
     for (int i = 0; i < GRID_SIZE; i++) {
         for (int j = 0; j < GRID_SIZE; j++) {
-            if (grid[i][j] == 0) {
+            if (grid[i][j] == 0 || grid[i][j] != solution[i][j]) {
                 return false;
             }
         }
     }
-
-    // Check if all rows, columns and boxes are valid
-    for (int i = 0; i < GRID_SIZE; i++) {
-        for (int num = 1; num <= GRID_SIZE; num++) {
-            if (!isValidInRow(i, num) || !isValidInCol(i, num)) {
-                return false;
-            }
-        }
-    }
-
-    for (int box = 0; box < GRID_SIZE; box += SUBGRID_SIZE) {
-        for (int num = 1; num <= GRID_SIZE; num++) {
-            if (!isValidInBox(box, box, num)) {
-                return false;
-            }
-        }
-    }
-
     return true;
 }
