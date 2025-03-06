@@ -12,6 +12,14 @@ public:
     static const int WINDOW_WIDTH = CELL_SIZE * Sudoku::GRID_SIZE;
     static const int WINDOW_HEIGHT = CELL_SIZE * Sudoku::GRID_SIZE + 100; // Increased height to accommodate score display
     
+    enum class Theme {
+        Light,
+        Dark
+    };
+    
+    void setTheme(Theme theme) { currentTheme = theme; }
+    Theme getTheme() const { return currentTheme; }
+    
     Renderer();
     ~Renderer();
     
@@ -26,6 +34,7 @@ public:
     bool handleVictoryScreenClick(int x, int y);
     void renderHighGammaEffect();
     void renderMenuScreen();
+    void renderMenuButton(const SDL_Rect& btn, const std::string& text, int mouseX, int mouseY, Uint32 mouseState, bool isGreen = true);
     bool handleMenuClick(int x, int y);
 
 private:
@@ -33,6 +42,7 @@ private:
     SDL_Renderer* renderer;
     TTF_Font* font;
     static SDL_Texture *cachedBackground;
+    Theme currentTheme = Theme::Light; // Default to light theme
 
     void renderGrid();
     void renderNumbers(const Sudoku& sudoku);

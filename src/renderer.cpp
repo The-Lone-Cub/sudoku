@@ -74,11 +74,18 @@ void Renderer::close() {
 }
 
 void Renderer::render(const Sudoku& sudoku, int selectedRow, int selectedCol) {
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    // Set background color based on theme
+    SDL_SetRenderDrawColor(renderer, 
+        currentTheme == Theme::Light ? 255 : 0,
+        currentTheme == Theme::Light ? 255 : 0,
+        currentTheme == Theme::Light ? 255 : 0, 255);
     SDL_RenderClear(renderer);
 
     // Add padding at the top for score display
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_SetRenderDrawColor(renderer,
+        currentTheme == Theme::Light ? 255 : 0,
+        currentTheme == Theme::Light ? 255 : 0,
+        currentTheme == Theme::Light ? 255 : 0, 255);
     SDL_Rect topPadding = {0, 0, WINDOW_WIDTH, 50};
     SDL_RenderFillRect(renderer, &topPadding);
 
@@ -100,7 +107,7 @@ void Renderer::render(const Sudoku& sudoku, int selectedRow, int selectedCol) {
 
 void Renderer::renderScore(int score) {
     std::string scoreText = "Score: " + std::to_string(score);
-    SDL_Color color = {0, 0, 0, 255}; // Black color for score
+    SDL_Color color = currentTheme == Theme::Light ? SDL_Color{0, 0, 0, 255} : SDL_Color{255, 255, 255, 255};
     renderText(scoreText, 10, 10, color);
 }
 
@@ -112,7 +119,7 @@ void Renderer::renderTimer(int elapsedSeconds) {
     ss << std::setfill('0') << std::setw(2) << minutes << ":" 
        << std::setfill('0') << std::setw(2) << seconds;
     
-    SDL_Color color = {0, 0, 0, 255}; // Black color for timer
+    SDL_Color color = currentTheme == Theme::Light ? SDL_Color{0, 0, 0, 255} : SDL_Color{255, 255, 255, 255};
     renderText(ss.str(), WINDOW_WIDTH - 100, 10, color); // Position in top-right corner
 }
 
@@ -134,7 +141,10 @@ void Renderer::renderText(const std::string& text, int x, int y, SDL_Color color
 }
 
 void Renderer::renderGrid() {
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_SetRenderDrawColor(renderer,
+        currentTheme == Theme::Light ? 0 : 255,
+        currentTheme == Theme::Light ? 0 : 255,
+        currentTheme == Theme::Light ? 0 : 255, 255);
     // Move grid down by 50 pixels to accommodate score display
     const int GRID_START_Y = 50;
 
@@ -172,26 +182,37 @@ void Renderer::renderSelectedCell(int row, int col) {
     const int GRID_PIXELS = Sudoku::GRID_SIZE * CELL_SIZE;
     const int GRID_START_Y = 50;
 
-    // Highlight the entire row with a very faint blue
-    SDL_SetRenderDrawColor(renderer, 230, 240, 255, 255); // Very light blue
+    // Define colors based on theme
+    SDL_Color rowColor, colColor, subgridColor, selectedColor;
+    if (currentTheme == Theme::Light) {
+        rowColor = {230, 240, 255, 255};
+        colColor = {220, 235, 255, 255};
+        subgridColor = {225, 238, 255, 255};
+        selectedColor = {215, 233, 255, 255};  // Matches the intersection of blues
+    } else {
+        rowColor = {45, 25, 0, 255};
+        colColor = {55, 30, 0, 255};
+        subgridColor = {50, 27, 0, 255};
+        selectedColor = {80, 60, 0, 255};    // Darker yellow for dark theme
+    }
+
+    // Render row, column, and subgrid highlights first
+    SDL_SetRenderDrawColor(renderer, rowColor.r, rowColor.g, rowColor.b, rowColor.a);
     SDL_Rect rowRect = {0, GRID_START_Y + row * CELL_SIZE, GRID_PIXELS, CELL_SIZE};
+    SDL_RenderFillRect(renderer, &rowRect);
 
-    // Highlight the entire column with a slightly different faint blue
-    SDL_SetRenderDrawColor(renderer, 220, 235, 255, 255); // Another very light blue
+    SDL_SetRenderDrawColor(renderer, colColor.r, colColor.g, colColor.b, colColor.a);
     SDL_Rect colRect = {col * CELL_SIZE, GRID_START_Y, CELL_SIZE, GRID_PIXELS};
+    SDL_RenderFillRect(renderer, &colRect);
 
-    // Highlight the 3x3 subgrid with yet another faint blue
-    SDL_SetRenderDrawColor(renderer, 225, 238, 255, 255); // Third very light blue
+    SDL_SetRenderDrawColor(renderer, subgridColor.r, subgridColor.g, subgridColor.b, subgridColor.a);
     int subgridStartRow = (row / 3) * 3;
     int subgridStartCol = (col / 3) * 3;
     SDL_Rect subgridRect = {subgridStartCol * CELL_SIZE, GRID_START_Y + subgridStartRow * CELL_SIZE, CELL_SIZE * 3, CELL_SIZE * 3};
-
-    SDL_RenderFillRect(renderer, &rowRect);
-    SDL_RenderFillRect(renderer, &colRect);
     SDL_RenderFillRect(renderer, &subgridRect);
 
-    // Highlight the selected cell with the original light blue color
-    SDL_SetRenderDrawColor(renderer, 173, 216, 230, 255); // Original light blue
+    // Render the selected cell on top with yellow highlight
+    SDL_SetRenderDrawColor(renderer, selectedColor.r, selectedColor.g, selectedColor.b, selectedColor.a);
     SDL_Rect selectedRect = {col * CELL_SIZE, GRID_START_Y + row * CELL_SIZE, CELL_SIZE, CELL_SIZE};
     SDL_RenderFillRect(renderer, &selectedRect);
 }
@@ -220,7 +241,12 @@ void Renderer::renderNumberCounts(const Sudoku& sudoku) {
     int startY = WINDOW_HEIGHT - 40;  // Position for number counts (moved down 4 pixels)
     
     for (int i = 0; i < 9; i++) {
-        SDL_Color color = (counts[i] == 9) ? SDL_Color{0, 255, 0, 255} : SDL_Color{0, 0, 0, 255};
+        SDL_Color color;
+        if (currentTheme == Theme::Light) {
+            color = (counts[i] == 9) ? SDL_Color{0, 255, 0, 255} : SDL_Color{0, 0, 0, 255};
+        } else {
+            color = (counts[i] == 9) ? SDL_Color{255, 0, 0, 255} : SDL_Color{255, 255, 255, 255};
+        }
         
         // Render the number
         TTF_SetFontStyle(font, TTF_STYLE_BOLD);
@@ -268,7 +294,12 @@ void Renderer::renderNumberCounts(const Sudoku& sudoku) {
 }
 
 void Renderer::renderNumber(int number, int row, int col, bool isFixed) {
-    SDL_Color color = isFixed ? SDL_Color{0, 0, 0, 255} : SDL_Color{0, 0, 255, 255};
+    SDL_Color color;
+    if (currentTheme == Theme::Light) {
+        color = isFixed ? SDL_Color{0, 0, 0, 255} : SDL_Color{0, 0, 255, 255};
+    } else {
+        color = isFixed ? SDL_Color{255, 255, 255, 255} : SDL_Color{100, 100, 255, 255};
+    }
     std::string text = std::to_string(number);
     const int GRID_START_Y = 50;
     
@@ -294,8 +325,15 @@ void Renderer::renderNumber(int number, int row, int col, bool isFixed) {
 }
 
 void Renderer::renderMessage(const std::string& message) {
-    SDL_Color color = {0, 128, 0, 255}; // Green color for success message
-    SDL_Surface* surface = TTF_RenderText_Blended(font, message.c_str(), color);
+    // Use theme-appropriate colors
+    SDL_Color textColor;
+    if (currentTheme == Theme::Light) {
+        textColor = SDL_Color{0, 128, 0, 255};  // Dark green for light theme
+    } else {
+        textColor = SDL_Color{0, 255, 0, 255};  // Bright green for dark theme
+    }
+
+    SDL_Surface* surface = TTF_RenderText_Blended(font, message.c_str(), textColor);
     if (!surface) return;
 
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
@@ -312,10 +350,16 @@ void Renderer::renderMessage(const std::string& message) {
         textH
     };
 
-    // Draw semi-transparent background
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 200);
+    // Draw semi-transparent background based on theme
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    if (currentTheme == Theme::Light) {
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 200);
+    } else {
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 200);
+    }
     SDL_Rect bgRect = {0, WINDOW_HEIGHT/2 - 30, WINDOW_WIDTH, 60};
     SDL_RenderFillRect(renderer, &bgRect);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 
     SDL_RenderCopy(renderer, texture, nullptr, &dstRect);
     SDL_DestroyTexture(texture);
@@ -331,14 +375,23 @@ void Renderer::renderHighGammaEffect() {
 }
 
 void Renderer::renderMenuScreen() {
-    // Clear the screen with white background
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    // Set background color based on theme
+    if (currentTheme == Theme::Light) {
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    } else {
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    }
     SDL_RenderClear(renderer);
+
+    // Calculate dynamic button dimensions based on window size
+    const int buttonWidth = WINDOW_WIDTH * 0.4;  // 40% of window width
+    const int buttonHeight = WINDOW_HEIGHT * 0.08;  // 8% of window height
+    const int buttonSpacing = buttonHeight * 1.5;  // Space between buttons
 
     // Set font style and size for the title
     TTF_Font* titleFont = TTF_OpenFont("C:\\Windows\\Fonts\\arial.ttf", 72);
     TTF_SetFontStyle(titleFont, TTF_STYLE_BOLD);
-    SDL_Color titleColor = {0, 0, 0, 255}; // Black color for title
+    SDL_Color titleColor = currentTheme == Theme::Light ? SDL_Color{0, 0, 0, 255} : SDL_Color{255, 255, 255, 255};
     
     // Render SUDOKU title with larger font
     SDL_Surface* surface = TTF_RenderText_Blended(titleFont, "SUDOKU", titleColor);
@@ -348,7 +401,7 @@ void Renderer::renderMenuScreen() {
             SDL_Rect destRect;
             TTF_SizeText(titleFont, "SUDOKU", &destRect.w, &destRect.h);
             destRect.x = WINDOW_WIDTH / 2 - destRect.w / 2;
-            destRect.y = WINDOW_HEIGHT / 3 - destRect.h / 2;
+            destRect.y = WINDOW_HEIGHT / 4 - destRect.h / 2;  // Moved up to 1/4 of screen
             SDL_RenderCopy(renderer, texture, NULL, &destRect);
             SDL_DestroyTexture(texture);
         }
@@ -359,7 +412,7 @@ void Renderer::renderMenuScreen() {
     // Set font style and size for the subtitle
     TTF_Font* subtitleFont = TTF_OpenFont("C:\\Windows\\Fonts\\arial.ttf", 16);
     TTF_SetFontStyle(subtitleFont, TTF_STYLE_ITALIC);
-    SDL_Color subtitleColor = {128, 128, 128, 255}; // Gray color for subtitle
+    SDL_Color subtitleColor = currentTheme == Theme::Light ? SDL_Color{128, 128, 128, 255} : SDL_Color{200, 200, 200, 255};
     
     // Render subtitle with smaller font
     surface = TTF_RenderText_Blended(subtitleFont, "Made by Nsubuga Benard", subtitleColor);
@@ -369,7 +422,7 @@ void Renderer::renderMenuScreen() {
             SDL_Rect destRect;
             TTF_SizeText(subtitleFont, "Made by Nsubuga Benard", &destRect.w, &destRect.h);
             destRect.x = WINDOW_WIDTH / 2 - destRect.w / 2;
-            destRect.y = WINDOW_HEIGHT / 3 + 60;
+            destRect.y = WINDOW_HEIGHT / 4 + 60;
             SDL_RenderCopy(renderer, texture, NULL, &destRect);
             SDL_DestroyTexture(texture);
         }
@@ -377,26 +430,55 @@ void Renderer::renderMenuScreen() {
     }
     TTF_CloseFont(subtitleFont);
 
-    // Reset font style for the button
+    // Reset font style for the buttons
     TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
 
-    // Render start button with the same style as victory screen buttons
-    SDL_Rect startBtn = {WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 + 50, 200, 40};
+    // Calculate button positions
+    const int startY = WINDOW_HEIGHT / 2;  // Start buttons from middle of screen
+    
+    // Theme button
+    SDL_Rect themeBtn = {
+        WINDOW_WIDTH / 2 - buttonWidth / 2,
+        startY,
+        buttonWidth,
+        buttonHeight
+    };
+    
+    // Start button
+    SDL_Rect startBtn = {
+        WINDOW_WIDTH / 2 - buttonWidth / 2,
+        startY + buttonSpacing,
+        buttonWidth,
+        buttonHeight
+    };
 
-    // Get mouse state for hover effect
+    // Get mouse state for hover effects
     int mouseX, mouseY;
     Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
-    bool isHovered = (mouseX >= startBtn.x && mouseX <= startBtn.x + startBtn.w &&
-                     mouseY >= startBtn.y && mouseY <= startBtn.y + startBtn.h);
+
+    // Render theme button
+    renderMenuButton(themeBtn, 
+                    "Switch Theme",
+                    mouseX, mouseY, mouseState);
+
+    // Render start button
+    renderMenuButton(startBtn, "Start Game", mouseX, mouseY, mouseState, true);
+
+    SDL_RenderPresent(renderer);
+}
+
+void Renderer::renderMenuButton(const SDL_Rect& btn, const std::string& text, int mouseX, int mouseY, Uint32 mouseState, bool isGreen) {
+    bool isHovered = (mouseX >= btn.x && mouseX <= btn.x + btn.w &&
+                     mouseY >= btn.y && mouseY <= btn.y + btn.h);
     bool isClicked = isHovered && (mouseState & SDL_BUTTON_LMASK);
 
     // Button shadow
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 60);
-    SDL_Rect btnShadow = {startBtn.x + 2, startBtn.y + 2, startBtn.w, startBtn.h};
+    SDL_Rect btnShadow = {btn.x + 2, btn.y + 2, btn.w, btn.h};
     SDL_RenderFillRect(renderer, &btnShadow);
 
     // Button body with interaction effects
-    SDL_Rect buttonRect = startBtn;
+    SDL_Rect buttonRect = btn;
     if (isHovered) {
         if (isClicked) {
             buttonRect.x += 2;
@@ -407,28 +489,51 @@ void Renderer::renderMenuScreen() {
         }
     }
 
-    // Button colors based on state
-    SDL_SetRenderDrawColor(renderer, 0,
-        isHovered ? (isClicked ? 80 : 100) : 128,
-        0, 255);
+    // Button colors based on state and type
+    if (isGreen) {
+        SDL_SetRenderDrawColor(renderer, 0,
+            isHovered ? (isClicked ? 80 : 100) : 128,
+            0, 255);
+    } else {
+        SDL_SetRenderDrawColor(renderer,
+            isHovered ? (isClicked ? 80 : 100) : 100,
+            isHovered ? (isClicked ? 80 : 100) : 100,
+            isHovered ? (isClicked ? 80 : 100) : 100,
+            255);
+    }
     SDL_RenderFillRect(renderer, &buttonRect);
 
     // Button border
-    SDL_SetRenderDrawColor(renderer, 0, 200, 0, 255);
+    SDL_SetRenderDrawColor(renderer,
+        isGreen ? 0 : (currentTheme == Theme::Light ? 50 : 200),
+        isGreen ? 200 : (currentTheme == Theme::Light ? 50 : 200),
+        isGreen ? 0 : (currentTheme == Theme::Light ? 50 : 200),
+        255);
     SDL_RenderDrawRect(renderer, &buttonRect);
 
-    // Button text
-    SDL_Color white = {255, 255, 255, 255};
-    renderText("Start Game",
-              WINDOW_WIDTH / 2 - 50 + (isHovered ? (isClicked ? 3 : 1) : 0),
-              WINDOW_HEIGHT / 2 + 60 + (isHovered ? (isClicked ? 3 : 1) : 0),
-              white);
-
-    SDL_RenderPresent(renderer);
+    // Calculate text position to center it in the button
+    int textWidth, textHeight;
+    TTF_SizeText(font, text.c_str(), &textWidth, &textHeight);
+    
+    SDL_Color textColor = {255, 255, 255, 255};
+    renderText(text,
+        buttonRect.x + (buttonRect.w - textWidth) / 2 + (isHovered ? (isClicked ? 2 : 1) : 0),
+        buttonRect.y + (buttonRect.h - textHeight) / 2 + (isHovered ? (isClicked ? 2 : 1) : 0),
+        textColor);
 }
 
 bool Renderer::handleMenuClick(int x, int y) {
-    SDL_Rect startBtn = {WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 + 50, 200, 40};
+    SDL_Rect themeBtn = {WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2, 200, 40};
+    SDL_Rect startBtn = {WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 + 100, 200, 40};
+    
+    // Check if theme button was clicked
+    if (x >= themeBtn.x && x <= themeBtn.x + themeBtn.w &&
+        y >= themeBtn.y && y <= themeBtn.y + themeBtn.h) {
+        currentTheme = (currentTheme == Theme::Light) ? Theme::Dark : Theme::Light;
+        return false;
+    }
+    
+    // Check if start button was clicked
     return (x >= startBtn.x && x <= startBtn.x + startBtn.w &&
             y >= startBtn.y && y <= startBtn.y + startBtn.h);
 }
