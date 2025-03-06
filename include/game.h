@@ -4,6 +4,12 @@
 #include "renderer.h"
 #include "sudoku.h"
 
+enum class GameState {
+    MENU,
+    PLAYING,
+    VICTORY
+};
+
 class Game {
 public:
     Game();
@@ -17,10 +23,12 @@ private:
     Renderer renderer;
     Sudoku sudoku;
     bool running;
+    GameState state;
     int selectedRow;
     int selectedCol;
     Uint32 startTime;
     int elapsedSeconds;
+    bool handleMenuClick(int x, int y);
 
     void handleEvents();
     void handleMouseClick(int x, int y);

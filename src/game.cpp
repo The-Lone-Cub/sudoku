@@ -3,7 +3,7 @@
 
 int Game::currentElapsedSeconds = 0;  // Initialize static member
 
-Game::Game() : running(false), selectedRow(-1), selectedCol(-1), startTime(0), elapsedSeconds(0) {
+Game::Game() : running(false), state(GameState::MENU), selectedRow(-1), selectedCol(-1), startTime(0), elapsedSeconds(0) {
 }
 
 Game::~Game() {}
@@ -23,11 +23,17 @@ void Game::run() {
         handleEvents();
         
         // Second: Update game state
-        updateTimer();
+        if (state == GameState::PLAYING) {
+            updateTimer();
+        }
         
         // Third: Render the current state
         if (running) {  // Only render if we're still running
-            renderer.render(sudoku, selectedRow, selectedCol);
+            if (state == GameState::MENU) {
+                renderer.renderMenuScreen();
+            } else if (state == GameState::PLAYING) {
+                renderer.render(sudoku, selectedRow, selectedCol);
+            }
             SDL_Delay(16); // Cap at ~60 FPS
         }
     }
@@ -62,7 +68,20 @@ void Game::handleEvents() {
     }
 }
 
+bool Game::handleMenuClick(int x, int y) {
+    if (renderer.handleMenuClick(x, y)) {
+        state = GameState::PLAYING;
+        startTime = SDL_GetTicks();
+        return true;
+    }
+    return false;
+}
+
 void Game::handleMouseClick(int x, int y) {
+    if (state == GameState::MENU) {
+        handleMenuClick(x, y);
+        return;
+    }
     int newRow, newCol;
     renderer.getGridPosition(x, y, newRow, newCol);
     

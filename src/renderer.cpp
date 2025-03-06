@@ -330,6 +330,109 @@ void Renderer::renderHighGammaEffect() {
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 }
 
+void Renderer::renderMenuScreen() {
+    // Clear the screen with white background
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderClear(renderer);
+
+    // Set font style and size for the title
+    TTF_Font* titleFont = TTF_OpenFont("C:\\Windows\\Fonts\\arial.ttf", 72);
+    TTF_SetFontStyle(titleFont, TTF_STYLE_BOLD);
+    SDL_Color titleColor = {0, 0, 0, 255}; // Black color for title
+    
+    // Render SUDOKU title with larger font
+    SDL_Surface* surface = TTF_RenderText_Blended(titleFont, "SUDOKU", titleColor);
+    if (surface) {
+        SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+        if (texture) {
+            SDL_Rect destRect;
+            TTF_SizeText(titleFont, "SUDOKU", &destRect.w, &destRect.h);
+            destRect.x = WINDOW_WIDTH / 2 - destRect.w / 2;
+            destRect.y = WINDOW_HEIGHT / 3 - destRect.h / 2;
+            SDL_RenderCopy(renderer, texture, NULL, &destRect);
+            SDL_DestroyTexture(texture);
+        }
+        SDL_FreeSurface(surface);
+    }
+    TTF_CloseFont(titleFont);
+
+    // Set font style and size for the subtitle
+    TTF_Font* subtitleFont = TTF_OpenFont("C:\\Windows\\Fonts\\arial.ttf", 16);
+    TTF_SetFontStyle(subtitleFont, TTF_STYLE_ITALIC);
+    SDL_Color subtitleColor = {128, 128, 128, 255}; // Gray color for subtitle
+    
+    // Render subtitle with smaller font
+    surface = TTF_RenderText_Blended(subtitleFont, "Made by Nsubuga Benard", subtitleColor);
+    if (surface) {
+        SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+        if (texture) {
+            SDL_Rect destRect;
+            TTF_SizeText(subtitleFont, "Made by Nsubuga Benard", &destRect.w, &destRect.h);
+            destRect.x = WINDOW_WIDTH / 2 - destRect.w / 2;
+            destRect.y = WINDOW_HEIGHT / 3 + 60;
+            SDL_RenderCopy(renderer, texture, NULL, &destRect);
+            SDL_DestroyTexture(texture);
+        }
+        SDL_FreeSurface(surface);
+    }
+    TTF_CloseFont(subtitleFont);
+
+    // Reset font style for the button
+    TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
+
+    // Render start button with the same style as victory screen buttons
+    SDL_Rect startBtn = {WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 + 50, 200, 40};
+
+    // Get mouse state for hover effect
+    int mouseX, mouseY;
+    Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
+    bool isHovered = (mouseX >= startBtn.x && mouseX <= startBtn.x + startBtn.w &&
+                     mouseY >= startBtn.y && mouseY <= startBtn.y + startBtn.h);
+    bool isClicked = isHovered && (mouseState & SDL_BUTTON_LMASK);
+
+    // Button shadow
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 60);
+    SDL_Rect btnShadow = {startBtn.x + 2, startBtn.y + 2, startBtn.w, startBtn.h};
+    SDL_RenderFillRect(renderer, &btnShadow);
+
+    // Button body with interaction effects
+    SDL_Rect buttonRect = startBtn;
+    if (isHovered) {
+        if (isClicked) {
+            buttonRect.x += 2;
+            buttonRect.y += 2;
+        } else {
+            buttonRect.x += 1;
+            buttonRect.y += 1;
+        }
+    }
+
+    // Button colors based on state
+    SDL_SetRenderDrawColor(renderer, 0,
+        isHovered ? (isClicked ? 80 : 100) : 128,
+        0, 255);
+    SDL_RenderFillRect(renderer, &buttonRect);
+
+    // Button border
+    SDL_SetRenderDrawColor(renderer, 0, 200, 0, 255);
+    SDL_RenderDrawRect(renderer, &buttonRect);
+
+    // Button text
+    SDL_Color white = {255, 255, 255, 255};
+    renderText("Start Game",
+              WINDOW_WIDTH / 2 - 50 + (isHovered ? (isClicked ? 3 : 1) : 0),
+              WINDOW_HEIGHT / 2 + 60 + (isHovered ? (isClicked ? 3 : 1) : 0),
+              white);
+
+    SDL_RenderPresent(renderer);
+}
+
+bool Renderer::handleMenuClick(int x, int y) {
+    SDL_Rect startBtn = {WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 + 50, 200, 40};
+    return (x >= startBtn.x && x <= startBtn.x + startBtn.w &&
+            y >= startBtn.y && y <= startBtn.y + startBtn.h);
+}
+
 void Renderer::renderVictoryScreen(int score, int elapsedSeconds) {
     cachedBackground = nullptr;
     
@@ -476,12 +579,12 @@ void Renderer::renderVictoryScreen(int score, int elapsedSeconds) {
         SDL_Color white = {255, 255, 255, 255};
         if (i == 0) {
             renderText("New Game", 
-                      WINDOW_WIDTH / 2 - 40 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
+                      WINDOW_WIDTH / 2 - 60 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
                       yPos + 30 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
                       white);
         } else {
             renderText("Exit",
-                      WINDOW_WIDTH / 2 - 20 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
+                      WINDOW_WIDTH / 2 - 25 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
                       yPos + 80 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
                       white);
         }

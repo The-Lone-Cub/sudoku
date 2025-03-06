@@ -25,6 +25,8 @@ public:
     void renderVictoryScreen(int score, int elapsedSeconds);
     bool handleVictoryScreenClick(int x, int y);
     void renderHighGammaEffect();
+    void renderMenuScreen();
+    bool handleMenuClick(int x, int y);
 
 private:
     SDL_Window* window;
