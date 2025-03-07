@@ -573,7 +573,7 @@ void Renderer::renderVictoryScreen(int score, int elapsedSeconds) {
                            currentTheme == Theme::Light ? 255 : 0,
                            currentTheme == Theme::Light ? 255 : 0,
                            255); // Full opacity for box
-    SDL_Rect victoryBox = {WINDOW_WIDTH / 2 - 150, 80, 300, 300};
+    SDL_Rect victoryBox = {WINDOW_WIDTH / 2 - 150, 80, 300, 350};
     SDL_RenderFillRect(renderer, &victoryBox);
 
     // Draw outline with theme-appropriate color
@@ -622,7 +622,8 @@ void Renderer::renderVictoryScreen(int score, int elapsedSeconds) {
     yPos += 30;
     // Render buttons with enhanced visual effects
     SDL_Rect newGameBtn = {WINDOW_WIDTH / 2 - 100, yPos + 20, 200, 40};
-    SDL_Rect exitBtn = {WINDOW_WIDTH / 2 - 100, yPos + 70, 200, 40};
+    SDL_Rect mainMenuBtn = {WINDOW_WIDTH / 2 - 100, yPos + 70, 200, 40};
+    SDL_Rect exitBtn = {WINDOW_WIDTH / 2 - 100, yPos + 120, 200, 40};
 
     int mouseX, mouseY;
     SDL_GetMouseState(&mouseX, &mouseY);
@@ -630,15 +631,18 @@ void Renderer::renderVictoryScreen(int score, int elapsedSeconds) {
     // Calculate fresh hover states based on current mouse position
     bool newGameHover = (mouseX >= newGameBtn.x && mouseX <= newGameBtn.x + newGameBtn.w &&
                         mouseY >= newGameBtn.y && mouseY <= newGameBtn.y + newGameBtn.h);
+    bool mainMenuHover = (mouseX >= mainMenuBtn.x && mouseX <= mainMenuBtn.x + mainMenuBtn.w &&
+                         mouseY >= mainMenuBtn.y && mouseY <= mainMenuBtn.y + mainMenuBtn.h);
     bool exitHover = (mouseX >= exitBtn.x && mouseX <= exitBtn.x + exitBtn.w &&
                      mouseY >= exitBtn.y && mouseY <= exitBtn.y + exitBtn.h);
     
     int currentMouseState = SDL_GetMouseState(nullptr, nullptr);
     // Render buttons with current state
-    for (int i = 0; i < 2; i++) {
-        SDL_Rect* btn = (i == 0) ? &newGameBtn : &exitBtn;
-        bool isHovered = (i == 0) ? newGameHover : exitHover;
+    for (int i = 0; i < 3; i++) {
+        SDL_Rect* btn = (i == 0) ? &newGameBtn : (i == 1) ? &mainMenuBtn : &exitBtn;
+        bool isHovered = (i == 0) ? newGameHover : (i == 1) ? mainMenuHover : exitHover;
         bool isCurrentlyClicked = isHovered && (currentMouseState & SDL_BUTTON_LMASK);
+        const char* buttonText = (i == 0) ? "New Game" : (i == 1) ? "Main Menu" : "Exit";
     // Use theme-appropriate colors
     SDL_Color baseColor, hoverColor, clickColor;
     if (currentTheme == Theme::Light) {
@@ -681,31 +685,31 @@ void Renderer::renderVictoryScreen(int score, int elapsedSeconds) {
     SDL_RenderDrawRect(renderer, &buttonRect);
     // Button text
     SDL_Color white = {255, 255, 255, 255};
-    if (i == 0) {
-    renderText("New Game", 
-    WINDOW_WIDTH / 2 - 60 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
-    yPos + 30 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
-    white);
-    } else {
-    renderText("Exit",
-    WINDOW_WIDTH / 2 - 25 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
-    yPos + 80 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
-    white);
-    }
+    // Calculate text dimensions for centering
+    int textWidth, textHeight;
+    TTF_SizeText(font, buttonText, &textWidth, &textHeight);
+    // Center text horizontally and vertically within the button
+    int textX = buttonRect.x + (buttonRect.w - textWidth) / 2 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0);
+    int textY = buttonRect.y + (buttonRect.h - textHeight) / 2 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0);
+    renderText(buttonText, textX, textY, white);
     }
     SDL_RenderPresent(renderer);
 }
-bool Renderer::handleVictoryScreenClick(int x, int y) {
+int Renderer::handleVictoryScreenClick(int x, int y) {
     int yPos = 150 + 90;  // Match the button positions from renderVictoryScreen
     SDL_Rect newGameBtn = {WINDOW_WIDTH / 2 - 100, yPos + 20, 200, 40};
-    SDL_Rect exitBtn = {WINDOW_WIDTH / 2 - 100, yPos + 70, 200, 40};
-    if (x >= newGameBtn.x && x <= newGameBtn.x + newGameBtn.w) {
-    if (y >= newGameBtn.y && y <= newGameBtn.y + newGameBtn.h) {
-    return true;  // New Game clicked
-    } else if (y >= exitBtn.y && y <= exitBtn.y + exitBtn.h) {
-    SDL_Quit();
-    exit(0);
-    }
+    SDL_Rect mainMenuBtn = {WINDOW_WIDTH / 2 - 100, yPos + 70, 200, 40};
+    SDL_Rect exitBtn = {WINDOW_WIDTH / 2 - 100, yPos + 120, 200, 40};
+    
+    if (x >= WINDOW_WIDTH / 2 - 100 && x <= WINDOW_WIDTH / 2 + 100) {
+        if (y >= newGameBtn.y && y <= newGameBtn.y + newGameBtn.h) {
+            return 1;  // New Game clicked
+        } else if (y >= mainMenuBtn.y && y <= mainMenuBtn.y + mainMenuBtn.h) {
+            return 2;  // Main Menu clicked
+        } else if (y >= exitBtn.y && y <= exitBtn.y + exitBtn.h) {
+            SDL_Quit();
+            exit(0);
+        }
     }
     return false;
 }

@@ -34,7 +34,6 @@ private:
     void handleMouseClick(int x, int y);
     void handleKeyPress(SDL_Keycode key);
     void checkWinCondition();
-    void initializeScore();
     void updateTimer();
     
 private:

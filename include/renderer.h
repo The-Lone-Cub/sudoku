@@ -31,7 +31,7 @@ public:
     void renderScore(int score);
     void renderTimer(int elapsedSeconds);
     void renderVictoryScreen(int score, int elapsedSeconds);
-    bool handleVictoryScreenClick(int x, int y);
+    int handleVictoryScreenClick(int x, int y);
     void renderHighGammaEffect();
     void renderMenuScreen();
     void renderMenuButton(const SDL_Rect& btn, const std::string& text, int mouseX, int mouseY, Uint32 mouseState, bool isGreen = true);

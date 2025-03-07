@@ -115,12 +115,11 @@ void Game::handleKeyPress(SDL_Keycode key) {
 
 void Game::checkWinCondition() {
     if (sudoku.isSolved()) {
-        bool newGame = false;
-        SDL_Event event;
         bool shouldClose = false;
+        SDL_Event event;
+        int clickResult = 0;
         
-        while (!newGame && !shouldClose) {
-            // Handle all events first
+        while (clickResult == 0 && !shouldClose) {
             while (SDL_PollEvent(&event)) {
                 switch (event.type) {
                     case SDL_QUIT:
@@ -129,32 +128,33 @@ void Game::checkWinCondition() {
                         break;
                     case SDL_MOUSEBUTTONDOWN:
                         if (event.button.button == SDL_BUTTON_LEFT) {
-                            newGame = renderer.handleVictoryScreenClick(event.button.x, event.button.y);
+                            clickResult = renderer.handleVictoryScreenClick(event.button.x, event.button.y);
                         }
                         break;
                 }
             }
             
-            // Only render if we're not closing
             if (!shouldClose) {
                 renderer.renderVictoryScreen(sudoku.getScore(), elapsedSeconds);
                 SDL_Delay(16);
             }
         }
         
-        if (newGame) {
-            // Reset the game state
+        if (clickResult == 1) {  // New Game
             sudoku = Sudoku();
             selectedRow = selectedCol = -1;
             startTime = SDL_GetTicks();
             elapsedSeconds = 0;
             currentElapsedSeconds = 0;
-        } else {
+        } else if (clickResult == 2) {  // Main Menu
+            state = GameState::MENU;
+            sudoku = Sudoku();
+            selectedRow = selectedCol = -1;
+            startTime = SDL_GetTicks();
+            elapsedSeconds = 0;
+            currentElapsedSeconds = 0;
+        } else if(shouldClose) {
             running = false;
         }
     }
-}
-
-void Game::initializeScore() {
-    // Score initialization is now handled by the Sudoku class
 }
