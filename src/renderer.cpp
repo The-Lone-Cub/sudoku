@@ -185,15 +185,15 @@ void Renderer::renderSelectedCell(int row, int col) {
     // Define colors based on theme
     SDL_Color rowColor, colColor, subgridColor, selectedColor;
     if (currentTheme == Theme::Light) {
-        rowColor = {230, 240, 255, 255};
-        colColor = {220, 235, 255, 255};
-        subgridColor = {225, 238, 255, 255};
-        selectedColor = {215, 233, 255, 255};  // Matches the intersection of blues
+        rowColor = {0, 255, 202, 255};
+        colColor = {0, 255, 202, 255};
+        subgridColor = {0, 255, 202, 255};
+        selectedColor = {50, 133, 139, 255};  // Matches the intersection of blues
     } else {
-        rowColor = {45, 25, 0, 255};
-        colColor = {55, 30, 0, 255};
-        subgridColor = {50, 27, 0, 255};
-        selectedColor = {80, 60, 0, 255};    // Darker yellow for dark theme
+        rowColor = {199, 157, 42, 255};
+        colColor = {199, 157, 42, 255};
+        subgridColor = {199, 157, 42, 255};
+        selectedColor = {154, 70, 6, 255};    // Darker yellow for dark theme
     }
 
     // Render row, column, and subgrid highlights first
@@ -523,197 +523,192 @@ void Renderer::renderMenuButton(const SDL_Rect& btn, const std::string& text, in
 }
 
 bool Renderer::handleMenuClick(int x, int y) {
-    SDL_Rect themeBtn = {WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2, 200, 40};
-    SDL_Rect startBtn = {WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 + 100, 200, 40};
-    
+    // Use same calculations as renderMenuScreen
+    const int buttonWidth = WINDOW_WIDTH * 0.4;
+    const int buttonHeight = WINDOW_HEIGHT * 0.08;
+    const int buttonSpacing = buttonHeight * 1.5;
+    const int startY = WINDOW_HEIGHT / 2;
+
+    // Theme button
+    SDL_Rect themeBtn = {
+        WINDOW_WIDTH / 2 - buttonWidth / 2,
+        startY,
+        buttonWidth,
+        buttonHeight};
+
+    // Start button
+    SDL_Rect startBtn = {
+        WINDOW_WIDTH / 2 - buttonWidth / 2,
+        startY + buttonSpacing,
+        buttonWidth,
+        buttonHeight};
+
     // Check if theme button was clicked
     if (x >= themeBtn.x && x <= themeBtn.x + themeBtn.w &&
-        y >= themeBtn.y && y <= themeBtn.y + themeBtn.h) {
+        y >= themeBtn.y && y <= themeBtn.y + themeBtn.h)
+    {
         currentTheme = (currentTheme == Theme::Light) ? Theme::Dark : Theme::Light;
         return false;
     }
-    
+
     // Check if start button was clicked
     return (x >= startBtn.x && x <= startBtn.x + startBtn.w &&
             y >= startBtn.y && y <= startBtn.y + startBtn.h);
 }
 
 void Renderer::renderVictoryScreen(int score, int elapsedSeconds) {
-    cachedBackground = nullptr;
-    
-    // Create cached background texture on first call
-    if (!cachedBackground) {
-        // Create a target texture for the background
-        cachedBackground = SDL_CreateTexture(renderer, 
-            SDL_PIXELFORMAT_RGBA8888, 
-            SDL_TEXTUREACCESS_TARGET, 
-            WINDOW_WIDTH, 
-            WINDOW_HEIGHT);
-            
-        // Set the texture as the render target
-        SDL_SetRenderTarget(renderer, cachedBackground);
-        
-        // Apply the high gamma effect
-        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 180);
-        SDL_Rect fullScreenRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
-        SDL_RenderFillRect(renderer, &fullScreenRect);
-        
-        // Reset render target
-        SDL_SetRenderTarget(renderer, nullptr);
-    }
-    
-    // Copy the cached background
-    SDL_RenderCopy(renderer, cachedBackground, nullptr, nullptr);
-
-    // Rest of the victory screen rendering (stats, buttons, etc.)
-    // Get fresh mouse state at the start of each render
-    int mouseX, mouseY;
-    Uint32 currentMouseState = SDL_GetMouseState(&mouseX, &mouseY);
-
-    // Apply semi-transparent white overlay to create "high gamma" effect
+    // First, render the high gamma background based on theme
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 180);
-    SDL_Rect fullScreen = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
-    SDL_RenderFillRect(renderer, &fullScreen);
+    SDL_SetRenderDrawColor(renderer,
+                           currentTheme == Theme::Light ? 255 : 0, // White/Black background
+                           currentTheme == Theme::Light ? 255 : 0,
+                           currentTheme == Theme::Light ? 255 : 0,
+                           230); // High alpha for gamma effect
+    SDL_RenderClear(renderer);
 
-    // Create a semi-transparent white box for victory content
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 230);  // More opaque than the overlay
+    // Create the victory box with theme-appropriate colors
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer,
+                           currentTheme == Theme::Light ? 255 : 0, // White/Black fill
+                           currentTheme == Theme::Light ? 255 : 0,
+                           currentTheme == Theme::Light ? 255 : 0,
+                           255); // Full opacity for box
     SDL_Rect victoryBox = {WINDOW_WIDTH / 2 - 150, 80, 300, 300};
     SDL_RenderFillRect(renderer, &victoryBox);
-    
-    // Draw red outline with blend mode normal
+
+    // Draw outline with theme-appropriate color
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
-    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+    SDL_SetRenderDrawColor(renderer,
+                           currentTheme == Theme::Light ? 0 : 255, // Black/White outline
+                           currentTheme == Theme::Light ? 0 : 255,
+                           currentTheme == Theme::Light ? 0 : 255,
+                           255);
     SDL_RenderDrawRect(renderer, &victoryBox);
 
     // Calculate accuracy
     float accuracy = (static_cast<float>(score) / 405.0f) * 100.0f;
-
+    // Set text color based on theme
+    SDL_Color textColor = currentTheme == Theme::Light ? 
+        SDL_Color{0, 0, 0, 255} :     // Black text for light theme
+        SDL_Color{255, 255, 255, 255}; // White text for dark theme
     // Render "SUCCESS" label
-    SDL_Color color = {0, 128, 0, 255};
     TTF_SetFontStyle(font, TTF_STYLE_BOLD);
-    renderText("SUCCESS!", WINDOW_WIDTH / 2 - 60, 100, color);
+    renderText("SUCCESS!", WINDOW_WIDTH / 2 - 60, 100, textColor);
     TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
-
     // Render stats with aligned formatting
     const int labelX = WINDOW_WIDTH / 2 - 120;  // Left align position for labels
     const int valueX = WINDOW_WIDTH / 2 + 120;   // Increased space for right-aligned values
     int yPos = 150;
-
     // Score
-    renderText("Score:", labelX, yPos, color);
+    renderText("Score:", labelX, yPos, textColor);
     std::string scoreStr = std::to_string(score);
     int textW, textH;
     TTF_SizeText(font, scoreStr.c_str(), &textW, &textH);
-    renderText(scoreStr, valueX - textW, yPos, color);
+    renderText(scoreStr, valueX - textW, yPos, textColor);
     yPos += 30;
-
     // Time
-    renderText("Time:", labelX, yPos, color);
+    renderText("Time:", labelX, yPos, textColor);
     std::stringstream timeStr;
     timeStr << elapsedSeconds / 60 << ":" << std::setfill('0') << std::setw(2) << elapsedSeconds % 60;
     TTF_SizeText(font, timeStr.str().c_str(), &textW, &textH);
-    renderText(timeStr.str(), valueX - textW, yPos, color);
+    renderText(timeStr.str(), valueX - textW, yPos, textColor);
     yPos += 30;
-
     // Accuracy
-    renderText("Accuracy:", labelX, yPos, color);
+    renderText("Accuracy:", labelX, yPos, textColor);
     std::stringstream accuracyStr;
     accuracyStr << std::fixed << std::setprecision(1) << accuracy << "%";
     TTF_SizeText(font, accuracyStr.str().c_str(), &textW, &textH);
-    renderText(accuracyStr.str(), valueX - textW, yPos, color);
+    renderText(accuracyStr.str(), valueX - textW, yPos, textColor);
     yPos += 30;
-
     // Render buttons with enhanced visual effects
     SDL_Rect newGameBtn = {WINDOW_WIDTH / 2 - 100, yPos + 20, 200, 40};
     SDL_Rect exitBtn = {WINDOW_WIDTH / 2 - 100, yPos + 70, 200, 40};
+
+    int mouseX, mouseY;
+    SDL_GetMouseState(&mouseX, &mouseY);
 
     // Calculate fresh hover states based on current mouse position
     bool newGameHover = (mouseX >= newGameBtn.x && mouseX <= newGameBtn.x + newGameBtn.w &&
                         mouseY >= newGameBtn.y && mouseY <= newGameBtn.y + newGameBtn.h);
     bool exitHover = (mouseX >= exitBtn.x && mouseX <= exitBtn.x + exitBtn.w &&
                      mouseY >= exitBtn.y && mouseY <= exitBtn.y + exitBtn.h);
-
+    
+    int currentMouseState = SDL_GetMouseState(nullptr, nullptr);
     // Render buttons with current state
     for (int i = 0; i < 2; i++) {
         SDL_Rect* btn = (i == 0) ? &newGameBtn : &exitBtn;
         bool isHovered = (i == 0) ? newGameHover : exitHover;
         bool isCurrentlyClicked = isHovered && (currentMouseState & SDL_BUTTON_LMASK);
-
-        // Modern color scheme using Material Design-inspired colors
-        SDL_Color baseColor = {63, 81, 181, 255};  // Indigo 500
-        SDL_Color hoverColor = {92, 107, 192, 255}; // Indigo 400
-        SDL_Color clickColor = {48, 63, 159, 255};  // Indigo 700
-
-        // Shadow effect with depth
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 60);
-        SDL_Rect btnShadow = {btn->x + 2, btn->y + 2, btn->w, btn->h};
-        SDL_RenderFillRect(renderer, &btnShadow);
-
-        // Button body with position offset when interacting
-        SDL_Rect buttonRect = *btn;
-        if (isHovered) {
-            if (isCurrentlyClicked) {
-                buttonRect.x += 2;
-                buttonRect.y += 2;
-            } else {
-                buttonRect.x += 1;
-                buttonRect.y += 1;
-            }
-        }
-
-        // Set button color based on state
-        SDL_Color currentColor = isHovered ? 
-            (isCurrentlyClicked ? clickColor : hoverColor) : 
-            baseColor;
-        SDL_SetRenderDrawColor(renderer, 
-            currentColor.r, currentColor.g, currentColor.b, currentColor.a);
-
-        // Render button body and effects
-        SDL_SetRenderDrawColor(renderer, 0,
-            isHovered ? (isCurrentlyClicked ? 80 : 100) : 128,
-            0, 255);
-        SDL_RenderFillRect(renderer, &buttonRect);
-
-        // Button border
-        SDL_SetRenderDrawColor(renderer, 0, 200, 0, 255);
-        SDL_RenderDrawRect(renderer, &buttonRect);
-
-        // Button text
-        SDL_Color white = {255, 255, 255, 255};
-        if (i == 0) {
-            renderText("New Game", 
-                      WINDOW_WIDTH / 2 - 60 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
-                      yPos + 30 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
-                      white);
-        } else {
-            renderText("Exit",
-                      WINDOW_WIDTH / 2 - 25 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
-                      yPos + 80 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
-                      white);
-        }
+    // Use theme-appropriate colors
+    SDL_Color baseColor, hoverColor, clickColor;
+    if (currentTheme == Theme::Light) {
+    baseColor = {63, 81, 181, 255};    // Indigo 500
+    hoverColor = {92, 107, 192, 255};  // Indigo 400
+    clickColor = {48, 63, 159, 255};   // Indigo 700
+    } else {
+    baseColor = {130, 177, 255, 255};  // Light Blue
+    hoverColor = {179, 229, 252, 255}; // Lighter Blue
+    clickColor = {100, 149, 237, 255}; // Cornflower Blue
     }
-    
+    // Shadow effect with depth
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 60);
+    SDL_Rect btnShadow = {btn->x + 2, btn->y + 2, btn->w, btn->h};
+    SDL_RenderFillRect(renderer, &btnShadow);
+    // Button body with position offset when interacting
+    SDL_Rect buttonRect = *btn;
+    if (isHovered) {
+    if (isCurrentlyClicked) {
+    buttonRect.x += 2;
+    buttonRect.y += 2;
+    } else {
+    buttonRect.x += 1;
+    buttonRect.y += 1;
+    }
+    }
+    // Set button color based on state
+    SDL_Color currentColor = isHovered ? 
+    (isCurrentlyClicked ? clickColor : hoverColor) : 
+    baseColor;
+    SDL_SetRenderDrawColor(renderer, 
+    currentColor.r, currentColor.g, currentColor.b, currentColor.a);
+    // Render button body and effects
+    SDL_SetRenderDrawColor(renderer, 0,
+    isHovered ? (isCurrentlyClicked ? 80 : 100) : 128,
+    0, 255);
+    SDL_RenderFillRect(renderer, &buttonRect);
+    // Button border
+    SDL_SetRenderDrawColor(renderer, 0, 200, 0, 255);
+    SDL_RenderDrawRect(renderer, &buttonRect);
+    // Button text
+    SDL_Color white = {255, 255, 255, 255};
+    if (i == 0) {
+    renderText("New Game", 
+    WINDOW_WIDTH / 2 - 60 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
+    yPos + 30 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
+    white);
+    } else {
+    renderText("Exit",
+    WINDOW_WIDTH / 2 - 25 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
+    yPos + 80 + (isHovered ? (isCurrentlyClicked ? 3 : 1) : 0),
+    white);
+    }
+    }
     SDL_RenderPresent(renderer);
 }
-
 bool Renderer::handleVictoryScreenClick(int x, int y) {
     int yPos = 150 + 90;  // Match the button positions from renderVictoryScreen
     SDL_Rect newGameBtn = {WINDOW_WIDTH / 2 - 100, yPos + 20, 200, 40};
     SDL_Rect exitBtn = {WINDOW_WIDTH / 2 - 100, yPos + 70, 200, 40};
-
     if (x >= newGameBtn.x && x <= newGameBtn.x + newGameBtn.w) {
-        if (y >= newGameBtn.y && y <= newGameBtn.y + newGameBtn.h) {
-            return true;  // New Game clicked
-        } else if (y >= exitBtn.y && y <= exitBtn.y + exitBtn.h) {
-            SDL_Quit();
-            exit(0);
-        }
+    if (y >= newGameBtn.y && y <= newGameBtn.y + newGameBtn.h) {
+    return true;  // New Game clicked
+    } else if (y >= exitBtn.y && y <= exitBtn.y + exitBtn.h) {
+    SDL_Quit();
+    exit(0);
+    }
     }
     return false;
 }
-
 void Renderer::getGridPosition(int mouseX, int mouseY, int& row, int& col) {
     const int GRID_START_Y = 50;
     row = (mouseY - GRID_START_Y) / CELL_SIZE;

@@ -194,12 +194,12 @@ bool Sudoku::isCorrectNumber(int row, int col, int num) const {
 
 bool Sudoku::isSolved() const {
     // Check if all cells are filled and match the solution
-    /*for (int i = 0; i < GRID_SIZE; i++) {
+    for (int i = 0; i < GRID_SIZE; i++) {
         for (int j = 0; j < GRID_SIZE; j++) {
             if (grid[i][j] == 0 || grid[i][j] != solution[i][j]) {
                 return false;
             }
         }
-    }*/
+    }
     return true;
 }
