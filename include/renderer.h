@@ -5,6 +5,7 @@
 #include <SDL2/SDL_ttf.h>
 #include <string>
 #include "sudoku.h"
+#include "difficulty_settings.h"
 
 class Renderer {
 public:
@@ -36,19 +37,22 @@ public:
     void renderMenuScreen();
     void renderMenuButton(const SDL_Rect& btn, const std::string& text, int mouseX, int mouseY, Uint32 mouseState, bool isGreen = true);
     bool handleMenuClick(int x, int y);
-
+    void renderDifficultySlider();
+    void updateDifficultySlider(int mouseX);
+    
 private:
     SDL_Window* window;
     SDL_Renderer* renderer;
     TTF_Font* font;
     static SDL_Texture *cachedBackground;
     Theme currentTheme = Theme::Light; // Default to light theme
-
+    
     void renderGrid();
     void renderNumbers(const Sudoku& sudoku);
     void renderSelectedCell(int row, int col);
     void renderNumber(int number, int row, int col, bool isFixed);
     void renderNumberCounts(const Sudoku& sudoku);
+    void renderHighlightedNumbers(const Sudoku& sudoku, int highlightedNumber);
     std::array<int, 9> calculateNumberCounts(const Sudoku& sudoku) const;
     void renderText(const std::string& text, int x, int y, SDL_Color color);
 };

@@ -95,7 +95,10 @@ void Renderer::render(const Sudoku& sudoku, int selectedRow, int selectedCol) {
     // Render timer in top-right corner
     renderTimer(Game::getElapsedSeconds());
 
-    if (selectedRow >= 0 && selectedCol >= 0) {
+    // Render highlighted numbers when no cell is selected
+    if (selectedRow == -1 && selectedCol == -1) {
+        renderHighlightedNumbers(sudoku, sudoku.getHighlightedNumber());
+    } else if (selectedRow >= 0 && selectedCol >= 0) {
         renderSelectedCell(selectedRow, selectedCol);
     }
     renderGrid();
@@ -166,6 +169,30 @@ void Renderer::renderGrid() {
     }
 }
 
+void Renderer::renderHighlightedNumbers(const Sudoku& sudoku, int highlightedNumber) {
+    if (highlightedNumber <= 0 || !sudoku.isHighlightVisible()) return;
+    
+    const int GRID_START_Y = 50;
+    SDL_Color highlightColor = currentTheme == Theme::Light 
+        ? SDL_Color{220, 230, 240, 255}  // Soft blue highlight for light theme
+        : SDL_Color{101, 84, 43, 255};   // Dark golden brown for dark theme
+
+    for (int row = 0; row < Sudoku::GRID_SIZE; row++) {
+        for (int col = 0; col < Sudoku::GRID_SIZE; col++) {
+            if (sudoku.getNumber(row, col) == highlightedNumber) {
+                SDL_SetRenderDrawColor(renderer, highlightColor.r, highlightColor.g, highlightColor.b, highlightColor.a);
+                SDL_Rect cellRect = {
+                    col * CELL_SIZE,
+                    GRID_START_Y + row * CELL_SIZE,
+                    CELL_SIZE,
+                    CELL_SIZE
+                };
+                SDL_RenderFillRect(renderer, &cellRect);
+            }
+        }
+    }
+}
+
 void Renderer::renderNumbers(const Sudoku& sudoku) {
     for (int row = 0; row < Sudoku::GRID_SIZE; row++) {
         for (int col = 0; col < Sudoku::GRID_SIZE; col++) {
@@ -185,15 +212,15 @@ void Renderer::renderSelectedCell(int row, int col) {
     // Define colors based on theme
     SDL_Color rowColor, colColor, subgridColor, selectedColor;
     if (currentTheme == Theme::Light) {
-        rowColor = {0, 255, 202, 255};
-        colColor = {0, 255, 202, 255};
-        subgridColor = {0, 255, 202, 255};
-        selectedColor = {50, 133, 139, 255};  // Matches the intersection of blues
+        rowColor = {230, 240, 250, 255};     // Light blue
+        colColor = {230, 240, 250, 255};     // Light blue
+        subgridColor = {230, 240, 250, 255}; // Light blue
+        selectedColor = {180, 210, 240, 255}; // More saturated blue for better visibility
     } else {
-        rowColor = {199, 157, 42, 255};
-        colColor = {199, 157, 42, 255};
-        subgridColor = {199, 157, 42, 255};
-        selectedColor = {154, 70, 6, 255};    // Darker yellow for dark theme
+        rowColor = {189, 139, 16, 255};       // Slightly lighter goldenrod
+        colColor = {189, 139, 16, 255};       // Slightly lighter goldenrod
+        subgridColor = {189, 139, 16, 255};   // Slightly lighter goldenrod
+        selectedColor = {235, 185, 45, 255};  // Brighter golden highlight for better visibility
     }
 
     // Render row, column, and subgrid highlights first
@@ -296,9 +323,9 @@ void Renderer::renderNumberCounts(const Sudoku& sudoku) {
 void Renderer::renderNumber(int number, int row, int col, bool isFixed) {
     SDL_Color color;
     if (currentTheme == Theme::Light) {
-        color = isFixed ? SDL_Color{0, 0, 0, 255} : SDL_Color{0, 0, 255, 255};
+        color = isFixed ? SDL_Color{47, 79, 79, 255} : SDL_Color{70, 130, 180, 255};
     } else {
-        color = isFixed ? SDL_Color{255, 255, 255, 255} : SDL_Color{100, 100, 255, 255};
+        color = isFixed ? SDL_Color{255, 223, 186, 255} : SDL_Color{218, 165, 32, 255};
     }
     std::string text = std::to_string(number);
     const int GRID_START_Y = 50;
@@ -328,9 +355,9 @@ void Renderer::renderMessage(const std::string& message) {
     // Use theme-appropriate colors
     SDL_Color textColor;
     if (currentTheme == Theme::Light) {
-        textColor = SDL_Color{0, 128, 0, 255};  // Dark green for light theme
+        textColor = SDL_Color{47, 79, 79, 255};  // Dark slate gray for light theme
     } else {
-        textColor = SDL_Color{0, 255, 0, 255};  // Bright green for dark theme
+        textColor = SDL_Color{255, 223, 186, 255};  // Light peach for dark theme
     }
 
     SDL_Surface* surface = TTF_RenderText_Blended(font, message.c_str(), textColor);
@@ -387,6 +414,16 @@ void Renderer::renderMenuScreen() {
     const int buttonWidth = WINDOW_WIDTH * 0.4;  // 40% of window width
     const int buttonHeight = WINDOW_HEIGHT * 0.08;  // 8% of window height
     const int buttonSpacing = buttonHeight * 1.5;  // Space between buttons
+    const int startY = WINDOW_HEIGHT / 2;  // Start buttons from middle of screen
+
+    // Initialize difficulty slider if not already done
+    static bool sliderInitialized = false;
+    if (!sliderInitialized) {
+        DifficultySettings::getDifficultySlider()->slider = {WINDOW_WIDTH/4, startY + buttonSpacing + buttonHeight + 80, WINDOW_WIDTH/2, 20};
+        DifficultySettings::getDifficultySlider()->value = 0.5f; // Start at medium difficulty
+        DifficultySettings::getDifficultySlider()->isDragging = false;
+        sliderInitialized = true;
+    }
 
     // Set font style and size for the title
     TTF_Font* titleFont = TTF_OpenFont("C:\\Windows\\Fonts\\arial.ttf", 72);
@@ -433,9 +470,13 @@ void Renderer::renderMenuScreen() {
     // Reset font style for the buttons
     TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
 
-    // Calculate button positions
-    const int startY = WINDOW_HEIGHT / 2;  // Start buttons from middle of screen
+    // Get mouse position for slider interaction
+    int mouseX, mouseY;
+    SDL_GetMouseState(&mouseX, &mouseY);
     
+    // Render the difficulty slider
+    renderDifficultySlider();
+ 
     // Theme button
     SDL_Rect themeBtn = {
         WINDOW_WIDTH / 2 - buttonWidth / 2,
@@ -453,7 +494,6 @@ void Renderer::renderMenuScreen() {
     };
 
     // Get mouse state for hover effects
-    int mouseX, mouseY;
     Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
 
     // Render theme button
@@ -465,6 +505,39 @@ void Renderer::renderMenuScreen() {
     renderMenuButton(startBtn, "Start Game", mouseX, mouseY, mouseState, true);
 
     SDL_RenderPresent(renderer);
+}
+
+void Renderer::renderDifficultySlider() {
+    // Draw slider background
+    SDL_Color bgColor = currentTheme == Theme::Light ? SDL_Color{200, 200, 200, 255} : SDL_Color{100, 100, 100, 255};
+    SDL_SetRenderDrawColor(renderer, bgColor.r, bgColor.g, bgColor.b, bgColor.a);
+    SDL_RenderFillRect(renderer, &DifficultySettings::getDifficultySlider()->slider);
+
+    // Draw slider handle
+    int handleX = DifficultySettings::getDifficultySlider()->slider.x + 
+                  (int)(DifficultySettings::getDifficultySlider()->value * 
+                  DifficultySettings::getDifficultySlider()->slider.w);
+    SDL_Rect handle = {handleX - 10, 
+                      DifficultySettings::getDifficultySlider()->slider.y - 5, 
+                      20, 30};
+    SDL_Color handleColor = currentTheme == Theme::Light ? 
+                           SDL_Color{0, 120, 215, 255} : 
+                           SDL_Color{255, 200, 0, 255};
+    SDL_SetRenderDrawColor(renderer, handleColor.r, handleColor.g, handleColor.b, handleColor.a);
+    SDL_RenderFillRect(renderer, &handle);
+
+    // Draw difficulty labels
+    SDL_Color textColor = currentTheme == Theme::Light ? SDL_Color{0, 0, 0, 255} : SDL_Color{255, 255, 255, 255};
+    renderText("Easy", DifficultySettings::getDifficultySlider()->slider.x, DifficultySettings::getDifficultySlider()->slider.y - 30, textColor);
+    renderText("Medium", DifficultySettings::getDifficultySlider()->slider.x + DifficultySettings::getDifficultySlider()->slider.w/2 - 30, DifficultySettings::getDifficultySlider()->slider.y - 30, textColor);
+    renderText("Hard", DifficultySettings::getDifficultySlider()->slider.x + DifficultySettings::getDifficultySlider()->slider.w - 30, DifficultySettings::getDifficultySlider()->slider.y - 30, textColor);
+}
+
+void Renderer::updateDifficultySlider(int mouseX) {
+    if (DifficultySettings::getDifficultySlider()->isDragging) {
+        float newValue = (float)(mouseX - DifficultySettings::getDifficultySlider()->slider.x) / DifficultySettings::getDifficultySlider()->slider.w;
+        DifficultySettings::getDifficultySlider()->value = std::max(0.0f, std::min(1.0f, newValue));
+    }
 }
 
 void Renderer::renderMenuButton(const SDL_Rect& btn, const std::string& text, int mouseX, int mouseY, Uint32 mouseState, bool isGreen) {

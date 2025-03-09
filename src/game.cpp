@@ -1,4 +1,5 @@
 #include "game.h"
+#include "renderer.h"
 #include <SDL2/SDL.h>
 
 int Game::currentElapsedSeconds = 0;  // Initialize static member
@@ -58,7 +59,29 @@ void Game::handleEvents() {
                 break;
             case SDL_MOUSEBUTTONDOWN:
                 if (event.button.button == SDL_BUTTON_LEFT) {
-                    handleMouseClick(event.button.x, event.button.y);
+                    if (state == GameState::MENU) {
+                        // Check if click is on slider handle
+                        int handleX = DifficultySettings::getDifficultySlider()->slider.x + (int)(DifficultySettings::getDifficultySlider()->value * DifficultySettings::getDifficultySlider()->slider.w);
+                        SDL_Rect handle = {handleX - 10, DifficultySettings::getDifficultySlider()->slider.y - 5, 20, 30};
+                        if (event.button.x >= handle.x && event.button.x <= handle.x + handle.w &&
+                            event.button.y >= handle.y && event.button.y <= handle.y + handle.h) {
+                            DifficultySettings::getDifficultySlider()->isDragging = true;
+                        } else {
+                            handleMouseClick(event.button.x, event.button.y);
+                        }
+                    } else {
+                        handleMouseClick(event.button.x, event.button.y);
+                    }
+                }
+                break;
+            case SDL_MOUSEBUTTONUP:
+                if (event.button.button == SDL_BUTTON_LEFT) {
+                    DifficultySettings::getDifficultySlider()->isDragging = false;
+                }
+                break;
+            case SDL_MOUSEMOTION:
+                if (state == GameState::MENU && DifficultySettings::getDifficultySlider()->isDragging) {
+                    renderer.updateDifficultySlider(event.motion.x);
                 }
                 break;
             case SDL_KEYDOWN:
@@ -95,16 +118,20 @@ void Game::handleMouseClick(int x, int y) {
     if (sudoku.isCellEditable(newRow, newCol)) {
         selectedRow = newRow;
         selectedCol = newCol;
+        // When selecting a cell, turn off number highlighting
+        sudoku.setHighlightedNumber(0);
     } else {
         selectedRow = selectedCol = -1;
     }
 }
 
 void Game::handleKeyPress(SDL_Keycode key) {
-    if (selectedRow == -1 || selectedCol == -1) return;
-
     if (key >= SDLK_1 && key <= SDLK_9) {
         int number = key - SDLK_0;
+        if (selectedRow == -1 || selectedCol == -1) {
+            sudoku.setHighlightedNumber(number);
+            return;
+        }
         if (sudoku.setNumber(selectedRow, selectedCol, number)) {
             checkWinCondition();
         }
