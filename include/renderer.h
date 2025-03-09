@@ -3,6 +3,7 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_image.h>
 #include <string>
 #include "sudoku.h"
 #include "difficulty_settings.h"
@@ -36,6 +37,8 @@ public:
     void renderHighGammaEffect();
     void renderMenuScreen();
     void renderMenuButton(const SDL_Rect& btn, const std::string& text, int mouseX, int mouseY, Uint32 mouseState, bool isGreen = true);
+    void renderResetButton(int mouseX, int mouseY, Uint32 mouseState);
+    bool handleResetButtonClick(int x, int y);
     bool handleMenuClick(int x, int y);
     void renderDifficultySlider();
     void updateDifficultySlider(int mouseX);
@@ -45,6 +48,7 @@ private:
     SDL_Renderer* renderer;
     TTF_Font* font;
     static SDL_Texture *cachedBackground;
+    static SDL_Texture *resetTexture;
     Theme currentTheme = Theme::Light; // Default to light theme
     
     void renderGrid();

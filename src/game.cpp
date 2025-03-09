@@ -101,6 +101,14 @@ bool Game::handleMenuClick(int x, int y) {
 }
 
 void Game::handleMouseClick(int x, int y) {
+    if (state == GameState::PLAYING && renderer.handleResetButtonClick(x, y)) {
+        // Reset the game with current settings
+        sudoku = Sudoku();
+        startTime = SDL_GetTicks();
+        selectedRow = -1;
+        selectedCol = -1;
+        return;
+    }
     if (state == GameState::MENU) {
         handleMenuClick(x, y);
         return;

@@ -3,9 +3,11 @@
 #include <stdexcept>
 #include <array>
 #include <sstream>
+#include <iostream>
 #include <iomanip>
 
 SDL_Texture* Renderer::cachedBackground = nullptr;  // Define static member
+SDL_Texture *Renderer::resetTexture = nullptr;
 
 Renderer::Renderer() : window(nullptr), renderer(nullptr), font(nullptr) {}
 
@@ -14,6 +16,11 @@ Renderer::~Renderer() {
     {
         SDL_DestroyTexture(cachedBackground);
         cachedBackground = nullptr;
+    }
+    if (resetTexture)
+    {
+        SDL_DestroyTexture(resetTexture);
+        resetTexture = nullptr;
     }
     close();
 }
@@ -53,6 +60,12 @@ bool Renderer::init() {
         return false;
     }
 
+    //Initialise SDL image
+    if(!IMG_Init(IMG_INIT_PNG)) {
+        std::cerr << "SDL_image could not initialize! SDL_image Error: " << IMG_GetError() << std::endl;
+        return false;
+    }
+
     return true;
 }
 
@@ -74,6 +87,7 @@ void Renderer::close() {
 }
 
 void Renderer::render(const Sudoku& sudoku, int selectedRow, int selectedCol) {
+
     // Set background color based on theme
     SDL_SetRenderDrawColor(renderer, 
         currentTheme == Theme::Light ? 255 : 0,
@@ -91,6 +105,13 @@ void Renderer::render(const Sudoku& sudoku, int selectedRow, int selectedCol) {
 
     // Render score in top-left corner
     renderScore(sudoku.getScore());
+
+    // Get mouse state for reset button
+    int mouseX, mouseY;
+    Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
+
+    // Render reset button before timer
+    renderResetButton(mouseX, mouseY, mouseState);
 
     // Render timer in top-right corner
     renderTimer(Game::getElapsedSeconds());
@@ -124,6 +145,49 @@ void Renderer::renderTimer(int elapsedSeconds) {
     
     SDL_Color color = currentTheme == Theme::Light ? SDL_Color{0, 0, 0, 255} : SDL_Color{255, 255, 255, 255};
     renderText(ss.str(), WINDOW_WIDTH - 100, 10, color); // Position in top-right corner
+}
+
+void Renderer::renderResetButton(int mouseX, int mouseY, Uint32 mouseState) {
+    // Load the texture if it hasn't been loaded yet
+    if (!resetTexture) {
+        std::string imagePath = currentTheme == Theme::Light ? 
+            "assets/light/reset.png" : "assets/dark/reset.png";
+
+        SDL_Surface* resetSurface = IMG_Load(imagePath.c_str());
+        if (!resetSurface) return;
+
+        resetTexture = SDL_CreateTextureFromSurface(renderer, resetSurface);
+        SDL_FreeSurface(resetSurface);
+        
+        if (!resetTexture) return;
+    }
+    
+    // Position the reset button before the timer
+    SDL_Rect resetButton = {WINDOW_WIDTH - 180, 5, 40, 40};
+    
+    // Check if mouse is over the button
+    bool isHovered = mouseX >= resetButton.x && mouseX <= resetButton.x + resetButton.w &&
+                    mouseY >= resetButton.y && mouseY <= resetButton.y + resetButton.h;
+    
+    // Apply hover effect
+    if (isHovered) {
+        SDL_SetTextureAlphaMod(resetTexture, 200);
+        if (mouseState & SDL_BUTTON_LMASK) {
+            // Click effect
+            SDL_SetTextureAlphaMod(resetTexture, 150);
+        }
+    } else {
+        SDL_SetTextureAlphaMod(resetTexture, 255);
+    }
+
+    // Render the reset button texture
+    SDL_RenderCopy(renderer, resetTexture, NULL, &resetButton);
+}
+
+bool Renderer::handleResetButtonClick(int x, int y) {
+    SDL_Rect resetButton = {WINDOW_WIDTH - 180, 5, 40, 40};
+    return (x >= resetButton.x && x <= resetButton.x + resetButton.w &&
+            y >= resetButton.y && y <= resetButton.y + resetButton.h);
 }
 
 void Renderer::renderText(const std::string& text, int x, int y, SDL_Color color) {
