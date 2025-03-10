@@ -24,6 +24,8 @@ public:
             highlightedVisible = true;
         }
     }
+
+    bool isValid(int row, int col, int num) const;
     bool isHighlightVisible() const { return highlightedVisible; }
     int getHighlightedNumber() const { return highlightedNumber; }
 
@@ -34,20 +36,25 @@ private:
     std::vector<std::vector<bool>> scored;
     std::vector<std::vector<int>> wrong_answers;
     int score;
-    int highlightedNumber;  // Number to highlight when no cell is selected
-    bool highlightedVisible;  // Whether the highlighted number should be visible
+    int correctInputs;
+    int totalAttempts;
+    int highlightedNumber;
+    bool highlightedVisible;
 
     void generatePuzzle();
     bool solveGrid();
     bool findEmptyCell(int &row, int &col) const;
     void removeCells();
     int countSolutions(int count);
-    bool isValid(int row, int col, int num) const;
     bool isValidInRow(int row, int num) const;
     bool isValidInCol(int col, int num) const;
     bool isValidInBox(int startRow, int startCol, int num) const;
-    bool isCorrectNumber(int row, int col, int num) const;
     void initializeScore();
+    bool isRowComplete(int row) const;
+    bool isColumnComplete(int col) const;
+    bool isBoxComplete(int startRow, int startCol) const;
+    int getPenaltyForDifficulty() const;
+    float getAccuracyPercentage() const;
 private:
     bool findEmptyCellInGrid(const std::vector<std::vector<int>>& checkGrid, int& row, int& col) const;
     bool isValidInGrid(const std::vector<std::vector<int>>& checkGrid, int row, int col, int num) const;

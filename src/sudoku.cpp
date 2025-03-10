@@ -232,9 +232,18 @@ int Sudoku::countSolutionsRecursive(std::vector<std::vector<int>>& checkGrid, in
     return count;
 }
 bool Sudoku::isValid(int row, int col, int num) const {
-    return isValidInRow(row, num) && 
-           isValidInCol(col, num) && 
-           isValidInBox(row - row % SUBGRID_SIZE, col - col % SUBGRID_SIZE, num);
+    // Temporarily store and remove the current number
+    int currentNum = grid[row][col];
+    const_cast<Sudoku*>(this)->grid[row][col] = 0;
+
+    bool valid = isValidInRow(row, num) &&
+                isValidInCol(col, num) &&
+                isValidInBox(row - row % SUBGRID_SIZE, col - col % SUBGRID_SIZE, num);
+
+    // Restore the original number
+    const_cast<Sudoku*>(this)->grid[row][col] = currentNum;
+
+    return valid;
 }
 
 bool Sudoku::isValidInRow(int row, int num) const {
@@ -275,65 +284,154 @@ bool Sudoku::setNumber(int row, int col, int num) {
         return false;
     }
 
-    // Temporarily remove the current number to check validity
-    int temp = grid[row][col];
-    grid[row][col] = 0;
-
-    if (num == 0 || isValid(row, col, num)) {
-        grid[row][col] = num;
-        
-        // Update score based on correctness
-        if (num != 0) {
-            if (isCorrectNumber(row, col, num)) {
-                if (!scored[row][col]) {
-                    score += 5;  // Award 5 points for correct number
-                    scored[row][col] = true;  // Mark cell as scored
+    totalAttempts++;
+    // Set the new value
+    grid[row][col] = num;
+    
+    if (num != 0) {
+        if (num == solution[row][col]) {
+            correctInputs++;
+            score += 5;
+            
+            // Check for completed sections and award bonuses
+            if (!scored[row][col]) {
+                scored[row][col] = true;
+                
+                // Check row completion
+                if (isRowComplete(row)) {
+                    score += 10;
                 }
-                wrong_answers[row][col] = 0;  // Reset wrong answers when correct
-            } else {
-                // Only avoid score reduction if it's the exact same number as the last attempt
-                if (num != wrong_answers[row][col]) {
-                    score -= 2;  // Deduct 2 points for wrong number
+                
+                // Check column completion
+                if (isColumnComplete(col)) {
+                    score += 10;
                 }
-                wrong_answers[row][col] = num;  // Track this wrong answer
+                
+                // Check box completion
+                int startRow = row - (row % SUBGRID_SIZE);
+                int startCol = col - (col % SUBGRID_SIZE);
+                if (isBoxComplete(startRow, startCol)) {
+                    score += 10;
+                }
             }
+        } else {
+            // Apply difficulty-based penalty for incorrect answers
+            score -= getPenaltyForDifficulty();
+            wrong_answers[row][col]++;
         }
-        
-        return true;
     }
 
-    grid[row][col] = temp;
-    return false;
+    return true;
+}
+
+bool Sudoku::isRowComplete(int row) const {
+    for (int col = 0; col < GRID_SIZE; col++) {
+        if (grid[row][col] != solution[row][col]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool Sudoku::isColumnComplete(int col) const {
+    for (int row = 0; row < GRID_SIZE; row++) {
+        if (grid[row][col] != solution[row][col]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool Sudoku::isBoxComplete(int startRow, int startCol) const {
+    for (int i = 0; i < SUBGRID_SIZE; i++) {
+        for (int j = 0; j < SUBGRID_SIZE; j++) {
+            if (grid[startRow + i][startCol + j] != solution[startRow + i][startCol + j]) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+int Sudoku::getPenaltyForDifficulty() const {
+    float difficulty = DifficultySettings::getDifficultySlider()->value;
+    if (difficulty >= 0.7) { // Easy
+        return 1;
+    } else if (difficulty >= 0.3) { // Medium
+        return 2;
+    } else { // Hard
+        return 3;
+    }
+}
+
+float Sudoku::getAccuracyPercentage() const {
+    if (totalAttempts == 0) return 0.0f;
+    return (static_cast<float>(correctInputs) / totalAttempts) * 100.0f;
+}
+
+void Sudoku::initializeScore() {
+    score = 0;
+    correctInputs = 0;
+    totalAttempts = 0;
+    
+    // Initialize scored array
+    for (auto& row : scored) {
+        std::fill(row.begin(), row.end(), false);
+    }
+    
+    // Initialize wrong_answers array
+    for (auto& row : wrong_answers) {
+        std::fill(row.begin(), row.end(), 0);
+    }
 }
 
 int Sudoku::getNumber(int row, int col) const {
     return grid[row][col];
 }
 
-void Sudoku::initializeScore() {
-    score = 0;
-    // Add 5 points for each initial clue
-    for (int i = 0; i < GRID_SIZE; i++) {
-        for (int j = 0; j < GRID_SIZE; j++) {
-            if (fixed[i][j]) {
-                score += 5;
-            }
-        }
-    }
-}
-
-bool Sudoku::isCorrectNumber(int row, int col, int num) const {
-    return solution[row][col] == num;
-}
-
 bool Sudoku::isSolved() const {
-    // Check if all cells are filled and match the solution
+    // Check if all cells are filled
     for (int i = 0; i < GRID_SIZE; i++) {
         for (int j = 0; j < GRID_SIZE; j++) {
-            if (grid[i][j] == 0 || grid[i][j] != solution[i][j]) {
+            if (grid[i][j] == 0) {
                 return false;
             }
         }
     }
+
+    // Check each row for uniqueness
+    for (int row = 0; row < GRID_SIZE; row++) {
+        std::vector<bool> used(GRID_SIZE + 1, false);
+        for (int col = 0; col < GRID_SIZE; col++) {
+            int num = grid[row][col];
+            if (used[num]) return false;
+            used[num] = true;
+        }
+    }
+
+    // Check each column for uniqueness
+    for (int col = 0; col < GRID_SIZE; col++) {
+        std::vector<bool> used(GRID_SIZE + 1, false);
+        for (int row = 0; row < GRID_SIZE; row++) {
+            int num = grid[row][col];
+            if (used[num]) return false;
+            used[num] = true;
+        }
+    }
+
+    // Check each 3x3 box for uniqueness
+    for (int boxRow = 0; boxRow < GRID_SIZE; boxRow += SUBGRID_SIZE) {
+        for (int boxCol = 0; boxCol < GRID_SIZE; boxCol += SUBGRID_SIZE) {
+            std::vector<bool> used(GRID_SIZE + 1, false);
+            for (int i = 0; i < SUBGRID_SIZE; i++) {
+                for (int j = 0; j < SUBGRID_SIZE; j++) {
+                    int num = grid[boxRow + i][boxCol + j];
+                    if (used[num]) return false;
+                    used[num] = true;
+                }
+            }
+        }
+    }
+
     return true;
 }

@@ -54,7 +54,7 @@ private:
     void renderGrid();
     void renderNumbers(const Sudoku& sudoku);
     void renderSelectedCell(int row, int col);
-    void renderNumber(int number, int row, int col, bool isFixed);
+    void renderNumber(int number, int row, int col, bool isFixed, const Sudoku& sudoku);
     void renderNumberCounts(const Sudoku& sudoku);
     void renderHighlightedNumbers(const Sudoku& sudoku, int highlightedNumber);
     std::array<int, 9> calculateNumberCounts(const Sudoku& sudoku) const;

@@ -83,6 +83,7 @@ void Renderer::close() {
         window = nullptr;
     }
     TTF_Quit();
+    IMG_Quit();
     SDL_Quit();
 }
 
@@ -262,7 +263,7 @@ void Renderer::renderNumbers(const Sudoku& sudoku) {
         for (int col = 0; col < Sudoku::GRID_SIZE; col++) {
             int number = sudoku.getNumber(row, col);
             if (number != 0) {
-                renderNumber(number, row, col, !sudoku.isCellEditable(row, col));
+                renderNumber(number, row, col, !sudoku.isCellEditable(row, col), sudoku);
             }
         }
     }
@@ -384,13 +385,27 @@ void Renderer::renderNumberCounts(const Sudoku& sudoku) {
     TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
 }
 
-void Renderer::renderNumber(int number, int row, int col, bool isFixed) {
+void Renderer::renderNumber(int number, int row, int col, bool isFixed, const Sudoku& sudoku) {
     SDL_Color color;
-    if (currentTheme == Theme::Light) {
+    if (number == 0) return;
+    
+    // Check if number is valid without modifying the grid
+    bool isWrong = !isFixed && number != 0 && !sudoku.isValid(row, col, number);
+
+    // Set color based on number state and theme
+    if (isWrong)
+    {
+        color = SDL_Color{255, 0, 0, 255}; // Red color for wrong numbers
+    }
+    else if (currentTheme == Theme::Light)
+    {
         color = isFixed ? SDL_Color{47, 79, 79, 255} : SDL_Color{70, 130, 180, 255};
-    } else {
+    }
+    else
+    {
         color = isFixed ? SDL_Color{255, 223, 186, 255} : SDL_Color{218, 165, 32, 255};
     }
+
     std::string text = std::to_string(number);
     const int GRID_START_Y = 50;
     
@@ -592,9 +607,9 @@ void Renderer::renderDifficultySlider() {
 
     // Draw difficulty labels
     SDL_Color textColor = currentTheme == Theme::Light ? SDL_Color{0, 0, 0, 255} : SDL_Color{255, 255, 255, 255};
-    renderText("Easy", DifficultySettings::getDifficultySlider()->slider.x, DifficultySettings::getDifficultySlider()->slider.y - 30, textColor);
+    renderText("Hard", DifficultySettings::getDifficultySlider()->slider.x, DifficultySettings::getDifficultySlider()->slider.y - 30, textColor);
     renderText("Medium", DifficultySettings::getDifficultySlider()->slider.x + DifficultySettings::getDifficultySlider()->slider.w/2 - 30, DifficultySettings::getDifficultySlider()->slider.y - 30, textColor);
-    renderText("Hard", DifficultySettings::getDifficultySlider()->slider.x + DifficultySettings::getDifficultySlider()->slider.w - 30, DifficultySettings::getDifficultySlider()->slider.y - 30, textColor);
+    renderText("Easy", DifficultySettings::getDifficultySlider()->slider.x + DifficultySettings::getDifficultySlider()->slider.w - 30, DifficultySettings::getDifficultySlider()->slider.y - 30, textColor);
 }
 
 void Renderer::updateDifficultySlider(int mouseX) {
